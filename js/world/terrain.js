@@ -36,7 +36,7 @@ window.SW = window.SW || {};
     blizzard: { name: '눈보라', icon: '🌨️', desc: '이동 -20%, 냉기 피해 +30%, 시야 320', speed: 0.8, frost: 1.3, perception: 320 },
     fog: { name: '안개', icon: '🌫️', desc: '시야 220 — 그 너머의 적은 공격할 수 없음 (공격한 적은 노출)', perception: 220 },
     sandstorm: { name: '모래폭풍', icon: '🏜️', desc: '원거리 빗나감 25%, 시야 300', miss: 0.25, perception: 300 },
-    wind: { name: '강풍', icon: '🌬️', desc: '바람을 등진 쪽 사거리 +12%, 맞바람 -12%, 투사체가 휘어짐', wind: 1 },
+    wind: { name: '강풍', icon: '🌬️', desc: '바람을 등진 쪽 원거리 사거리 +12%, 맞바람 쪽 -12%', wind: 1 },
   };
   SW.TIMES = {
     day: { name: '낮', icon: '🌞', desc: '기본 시야', dark: 0 },
