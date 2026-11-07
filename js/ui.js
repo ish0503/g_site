@@ -96,6 +96,10 @@
   const Tree = {
     fam: 'circle', sel: null,
     famUnlocked(f) { return save.data.skills.includes(SW.SKILL_TREES[f][0].id); },
+    visible(n) {
+      const sk = save.data.skills;
+      return sk.includes(n.id) || !n.req.length || n.req.some(r => sk.includes(r));
+    },
     nodeState(n) {
       const owned = save.data.skills.includes(n.id);
       if (owned) return 'owned';
@@ -117,7 +121,10 @@
         b.onclick = () => { this.fam = f; this.sel = null; this.render(); };
         tabs.appendChild(b);
       }
-      const nodes = SW.SKILL_TREES[this.fam];
+      const all = SW.SKILL_TREES[this.fam];
+      // 보유한 노드와 그 바로 다음 단계만 공개
+      const nodes = all.filter(n => this.visible(n));
+      const hidden = all.length - nodes.length;
       const CX = 150, CY = 92, NW = 128, NH = 60, PAD = 20;
       const maxX = Math.max(...nodes.map(n => n.x)), maxY = Math.max(...nodes.map(n => n.y));
       const view = $('#tree-view'); view.innerHTML = '';
@@ -127,7 +134,8 @@
       const pos = (n) => ({ x: PAD + n.x * CX, y: PAD + n.y * CY });
       let svg = `<svg width="${w}" height="${h}">`;
       for (const n of nodes) for (const r of n.req) {
-        const p = SW.SKILL_INDEX[r]; const a = pos(p), b = pos(n);
+        const p = SW.SKILL_INDEX[r];
+        if (!this.visible(p)) continue; const a = pos(p), b = pos(n);
         const owned = save.data.skills.includes(n.id), pOwned = save.data.skills.includes(r);
         const col = owned ? '#5fd38a' : pOwned ? '#ffcf4d' : '#3a465c';
         const x1 = a.x + NW / 2, y1 = a.y + NH, x2 = b.x + NW / 2, y2 = b.y;
@@ -148,6 +156,7 @@
         inner.appendChild(e);
       }
       view.appendChild(inner);
+      if (hidden) view.appendChild(el('div', 'tree-fog', `🌫️ 아직 드러나지 않은 노드 ${hidden}개 · 노드를 습득하면 다음 단계가 나타납니다`));
       this.renderDetail();
     },
     fxIcon(n) {
@@ -164,7 +173,7 @@
       head.appendChild(el('div', '', `<b>${F.name} · ${F.title}</b><div class="muted" style="font-size:12px">${F.desc}</div>`));
       d.appendChild(head);
       const n = this.sel && SW.SKILL_INDEX[this.sel];
-      if (!n) { d.appendChild(el('p', 'muted', '노드를 선택하면 자세한 정보가 표시됩니다.<br><br>🟩 보유 · 🟨 구매 가능 · ⬛ 잠김')); return; }
+      if (!n || !this.visible(n)) { d.appendChild(el('p', 'muted', '노드를 선택하면 자세한 정보가 표시됩니다.<br><br>🟩 보유 · 🟨 구매 가능 · ⬛ 잠김')); return; }
       const st = this.nodeState(n);
       d.appendChild(el('h3', '', n.name));
       if (n.desc) d.appendChild(el('div', 'muted', n.desc));

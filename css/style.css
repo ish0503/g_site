@@ -76,6 +76,7 @@ button { font: inherit; color: inherit; }
 .node.locked { opacity: .45; }
 .node.sel { outline: 2px solid #fff; outline-offset: 2px; }
 .node.unlock-node { border-style: solid; }
+.tree-fog { position: sticky; left: 0; bottom: 0; margin: 0 12px 12px; padding: 8px 12px; font-size: 12.5px; color: var(--muted); background: rgba(10,14,20,.7); border: 1px dashed var(--line); border-radius: 8px; width: fit-content; }
 .tree-detail { width: 290px; padding: 14px; overflow: auto; flex-shrink: 0; }
 .tree-detail h3 { margin: 0 0 6px; }
 .tree-detail ul { padding-left: 18px; margin: 8px 0; }
