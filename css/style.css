@@ -401,3 +401,13 @@ button { font: inherit; color: inherit; }
 body.replaying #b-start, body.replaying #b-pause, body.replaying #b-reset, body.replaying #b-clear, body.replaying .palette, body.replaying #b-pop, body.replaying #b-hint { display: none !important; }
 .supply { display: flex; gap: 6px; align-items: center; justify-content: center; font-size: 11px; margin-top: 3px; }
 .supply .sb { width: 70px; height: 5px; background: #222; border-radius: 3px; overflow: hidden; } .supply .sb div { height: 100%; }
+
+/* 3.1 직업 분기 트리 */
+.ctree .ctrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0; }
+.ctree .cnode { display: flex; flex-direction: column; gap: 3px; padding: 8px; border: 1px solid var(--line, #2a3550); border-radius: 8px; background: rgba(255,255,255,.03); }
+.ctree .cnode[data-cn] { cursor: pointer; }
+.ctree .cnode[data-cn]:hover { border-color: #ffcf4d; }
+.ctree .cnode.on { border-color: #4dd08a; background: rgba(77,208,138,.1); }
+.ctree .cnode.off { opacity: .45; }
+.ctree .pick { color: #ffcf4d; }
+@media (max-width: 600px) { .ctree .ctrow { grid-template-columns: 1fr; } }

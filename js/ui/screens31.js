@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────
-// 3.1 화면: 리플레이 보관함 · 직업 트리(전문화) · 보급 표시
+// 3.1 화면: 리플레이 보관함 · 직업 분기 트리 · 특성
 // ─────────────────────────────────────────────
 (() => {
   const { $, $$, el, toast, fmt, go } = SW.ui;
@@ -33,5 +33,55 @@
     body.querySelectorAll('[data-play]').forEach(b => b.onclick = async () => { const rec = await SW.Replay.get(b.dataset.play); SW.cmdUI.openReplay(await SW.Replay.unpack(rec.blob)); });
     body.querySelectorAll('[data-dl]').forEach(b => b.onclick = async () => { const rec = await SW.Replay.get(b.dataset.dl); const a = document.createElement('a'); a.href = URL.createObjectURL(rec.blob); a.download = `${rec.title.replace(/[^\w가-힣]+/g, '_')}.gwrep`; a.click(); });
     body.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { await SW.Replay.remove(b.dataset.del); S.replays(); });
+  };
+  // ═════ 군대 관리: 직업 분기 트리 · 특성 (기존 화면 뒤에 덧붙임) ═════
+  const origArmy = S.army;
+  S.army = () => {
+    origArmy();
+    const det = $('.army-det'); if (!det) return;
+    const on = $('.army-list .pu.on'); const type = on && on.dataset.u; if (!type) return;
+    // 목록 이름을 현재 직업 이름으로
+    $$('.army-list .pu').forEach(x => { const n = SW.classNameOf(x.dataset.u); if (n) x.querySelector('.pn').textContent = n; });
+    const g = SW.growthOf(type), T = SW.CLASS_TREES[type], evo = SW.EVOLUTIONS[type];
+    g.traits = g.traits || [];
+    const box = el('div', 'ctree');
+    let h = '';
+    if (T) {
+      const node = (k, lvReq, picked, locked) => {
+        const n = T[k], sk = n.skill && SW.ABILITIES[n.skill];
+        return `<div class="cnode ${picked ? 'on' : ''} ${locked ? 'off' : ''}" ${!picked && !locked ? `data-cn="${k}"` : ''}><b>${n.name}</b><span class="small">${n.desc}</span>${sk ? `<span class="small muted">🌀 ${sk.name}: ${sk.desc}</span>` : ''}${!picked && !locked ? `<span class="small pick">${lvReq === 10 ? `선택 ${SW.costText(SW.SUB_COST)}` : '선택 (무료)'}</span>` : ''}</div>`;
+      };
+      h += `<h4>🌳 직업 분기 (Lv.5 분기 → Lv.10 상위 직업)</h4>`;
+      h += `<div class="ctrow">${['a', 'b'].map(k => node(k, 5, g.cls === k, g.lv < 5 || (g.cls && g.cls !== k))).join('')}</div>`;
+      if (g.cls) {
+        const subs = [g.cls + '1', g.cls + '2'];
+        h += `<div class="ctrow">${subs.map(k => node(k, 10, g.sub === k, g.lv < 10 || (g.sub && g.sub !== k) || g.evo)).join('')}</div>`;
+      } else h += '<div class="small muted">Lv.5 에서 갈래를 고르면 Lv.10 상위 직업 두 가지가 열립니다.</div>';
+      if (evo) h += `<div class="small muted">Lv.10 에서는 상위 직업과 기존 진화(${evo.name}) 중 하나만 적용됩니다.${g.evo ? ' 이 유닛은 기존 진화를 사용 중이며, 상위 직업으로 바꾸려면 진화를 해제하세요 (진화 비용 💎' + evo.cost + ' 환급).' : ''}</div>`;
+      if (g.evo && evo) h += `<button class="btn small" id="evo-undo">진화 해제 (환급)</button>`;
+      if (g.cls) h += ` <a href="#" id="cls-reset" class="small">직업 초기화 (💎1, 상위 직업 비용은 환급되지 않음)</a>`;
+    }
+    h += `<h4>✨ 특성 (Lv.3 · Lv.7)</h4>`;
+    for (const [tier, lv] of [[1, 3], [2, 7]]) {
+      const cur = g.traits[tier - 1];
+      h += `<div class="row">${Object.entries(SW.TRAITS).filter(([, t]) => t.tier === tier).map(([id, t]) => `<button class="btn small ${cur === id ? 'primary' : ''}" data-tr="${tier}:${id}" ${g.lv < lv || cur ? 'disabled' : ''} title="${t.desc}">${t.icon} ${t.name}</button>`).join('')}</div>`;
+    }
+    const combos = SW.comboOf(g.traits);
+    h += `<div class="small">${combos.length ? combos.map(c => `🔗 <b>${c.name}</b>: ${c.desc}`).join(' · ') : '<span class="muted">조합: ' + SW.TRAIT_COMBOS.map(c => `${SW.TRAITS[c.a].name}+${SW.TRAITS[c.b].name}=${c.name}`).join(', ') + '</span>'}</div>`;
+    if (g.traits.some(Boolean)) h += `<a href="#" id="tr-reset" class="small">특성 초기화 (💎1)</a>`;
+    box.innerHTML = h;
+    det.insertBefore(box, $('#army-card'));
+    if (T && g.sub) { const ev = $('#evo'); if (ev) ev.disabled = true; }
+    const redo = () => { save.write(); S.army(); };
+    box.querySelectorAll('[data-cn]').forEach(x => x.onclick = () => {
+      const k = x.dataset.cn;
+      if (k.length === 1) { g.cls = k; g.sub = null; toast(`${T[k].name}(으)로 전직`); return redo(); }
+      if (!SW.pay(SW.SUB_COST)) return toast('자원 부족 ' + SW.costText(SW.SUB_COST));
+      g.sub = k; toast(`${T[k].name}(으)로 전직!`); redo();
+    });
+    const eu = $('#evo-undo'); if (eu) eu.onclick = () => { g.evo = false; SW.gain({ crystal: evo.cost }); toast('진화 해제 (수정 환급)'); redo(); };
+    const cr = $('#cls-reset'); if (cr) cr.onclick = (e) => { e.preventDefault(); if (!SW.pay({ crystal: 1 })) return toast('수정 부족'); g.cls = null; g.sub = null; redo(); };
+    box.querySelectorAll('[data-tr]').forEach(x => x.onclick = () => { const [tier, id] = x.dataset.tr.split(':'); g.traits[+tier - 1] = id; redo(); });
+    const tr = $('#tr-reset'); if (tr) tr.onclick = (e) => { e.preventDefault(); if (!SW.pay({ crystal: 1 })) return toast('수정 부족'); g.traits = []; redo(); };
   };
 })();

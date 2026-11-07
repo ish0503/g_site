@@ -1,4 +1,4 @@
-# 도형 전쟁 3.0 · Beyond the Battlefield
+# 도형 전쟁 3.1 · Beyond the Battlefield
 
 원·삼각형·사각형 같은 도형 유닛으로 싸우는 2D 실시간 전쟁 전략 시뮬레이터. 빌드 없이 순수 HTML/CSS/JavaScript로 동작하며 GitHub Pages에서 바로 실행됩니다.
 
@@ -9,6 +9,24 @@
 | 전쟁 | 전쟁 시뮬레이션(5개 시나리오, 최대 수천 기) · 캠페인/정복/외교 · 공성전(공격·방어) · 토너먼트 · AI 대전 |
 | 창작·성장 | 샌드박스 + 커스텀 전투 규칙(지형 칠하기·날씨·시간·승리 조건·능력치 배율·시나리오 저장/공유) · 유닛 편집기 · 군대 관리 · 스킬 트리 · 도감 |
 | 분석 | 전투 리플레이 · 전투 분석(유닛별 DPS·생존율·명령 효율·주요 사건) · 밸런스 분석기 |
+
+## 3.1 변경 사항
+- **경로 탐색**: 20px 내비게이션 격자 + 다익스트라 흐름장(LRU 캐시) + 시야선 판정. 산맥 우회, 여울·다리 이용, 성벽이 무너지면 즉시 격자 갱신 (`js/world/nav.js`)
+- **전술 AI**: 상대 편성 분석 후 상성 대응, 지형(언덕·숲) 활용, 국지 증원, 붕괴한 부대 후퇴, 핵심 목표(치유사·포병) 추적, 편성 상황별 학습 (`js/war/tactics.js`, 이전 AI는 `legacy` 로 보존)
+- **리플레이**: 투사체·범위 공격·스킬 효과·피해 숫자·처치·지형 변화까지 기록, 보관함(IndexedDB 12개)·파일(.gwrep, gzip) 저장·공유 (`js/analytics/replay2.js`)
+- **전투 보급**: 팀별 보급 기지(파괴 가능)와 보급량. 보급 30% 미만·고갈 시 공격력·재생·기술 회복·사기 저하, 기지에서 너무 먼 유닛은 보급선 이탈. AI가 적 기지를 습격하고 자기 기지를 방어. 전쟁 시뮬레이션·캠페인(식량 부족 시 50%로 시작)·AI 대전·샌드박스 커스텀 규칙에 적용 (`js/war/supply.js`)
+- **직업 분기**: 12개 병종에 Lv5 두 갈래 → Lv10 상위 직업 두 가지(고유 기술 교체), Lv3·Lv7 특성과 조합 보너스 6종. 기존 진화는 Lv10 의 대체 선택지로 유지 (`js/progression/classes.js`)
+- **성능**: 형식 배열 공간 격자, 원거리 유닛 LOD, 분리·사고 주기 조절
+- **결정론적 테스트**: 전투별 시드 RNG(mulberry32), 같은 시드 → 같은 결과
+
+## 테스트
+```
+node tests/run.js           # 회귀 테스트 (시드 고정)
+node tests/classes.test.js  # 직업 분기·특성·3.0 저장 호환
+node tests/path.test.js     # 경로 탐색 켬/끔 비교
+node tests/ai.test.js       # 3.1 AI vs 3.0 AI
+node tests/bench.js [N...]  # 대규모 전투 벤치마크
+```
 
 ## 3.0 핵심 시스템
 - **전투 엔진**: 출혈·공포·혼란·침묵·속박·무적·감전, 사기와 패주, 포위, 부상, 측면·후방, 지형·날씨·시간 규칙, 파괴 가능한 성벽·성문·방어탑·성채, 동적 전장(화재 확산·크레이터·범람·낙뢰), 승리 조건(전멸·지휘관·거점·성채·보호·생존)
@@ -23,14 +41,14 @@
 ```
 js/data/       units.js units3.js tree.js stages.js abilities.js formations.js bosses.js
 js/battle/     engine.js(코어) combat.js ai.js abilities.js formation.js boss.js engine3.js(3.0 확장)
-js/war/        squads.js (부대·명령·지휘관·전술 AI·전선·군대 편성기·AI 학습)
-js/world/      terrain.js (지형·날씨·시간·동적 전장)
-js/progression/growth.js (레벨·전문화·진화·장비·자원)
+js/war/        squads.js (부대·명령·지휘관·전선·군대 편성기) tactics.js(3.1 전술 AI) supply.js(3.1 보급)
+js/world/      terrain.js (지형·날씨·시간·동적 전장) nav.js(3.1 경로 탐색)
+js/progression/growth.js (레벨·전문화·진화·장비·자원) classes.js(3.1 직업 분기·특성)
 js/modes/      survival.js content3.js(공성·전쟁 시나리오·퍼즐·보스 부위·연속 보스전) campaign.js tournament.js
-js/analytics/  replay.js (리플레이·밸런스 분석)
+js/analytics/  replay.js (밸런스 분석) replay2.js(3.1 리플레이)
 js/render/     renderer.js
 js/core/       save.js
-js/ui/         ui.js command.js(지휘 패널·전략 지도·리플레이·커스텀 규칙) screens3.js(3.0 화면)
+js/ui/         ui.js command.js(지휘 패널·전략 지도·리플레이·커스텀 규칙) screens3.js(3.0 화면) screens31.js(3.1 리플레이 보관함·직업 트리)
 ```
 전투 엔진은 DOM에 의존하지 않아 Node에서 헤드리스 시뮬레이션이 가능합니다 (밸런스 분석기·토너먼트가 이를 사용).
 

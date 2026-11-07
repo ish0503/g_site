@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>도형 전쟁 3.0 - 기하학 전쟁 시뮬레이터</title>
+<title>도형 전쟁 3.1 - 기하학 전쟁 시뮬레이터</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -99,6 +99,13 @@
       <h2>게임 방법</h2>
     </header>
     <div class="help">
+      <h3>🆕 3.1</h3>
+      <ul>
+        <li><b>경로 탐색</b>: 유닛이 산맥·성벽을 돌아가고 강은 여울·다리로 건넙니다. 성벽이 무너지면 그 틈으로 진입합니다.</li>
+        <li><b>보급</b>(전쟁·캠페인·AI 대전, 샌드박스 규칙): 화면 위 🌾 막대가 보급량입니다. 양쪽 후방의 ➕ 보급 기지가 보급을 채우고, 기지가 파괴되면 보급과 사기가 떨어집니다. 보급 30% 미만이면 공격력·재생이 줄고, 기지에서 너무 멀리 나간 유닛은 약해집니다.</li>
+        <li><b>직업 분기</b>(군대 관리): Lv5 에 두 갈래 중 하나, Lv10 에 상위 직업(고유 기술)을 고릅니다. Lv3·Lv7 특성 조합에 따라 추가 보너스가 붙습니다.</li>
+        <li><b>리플레이 보관함</b>: 결과 화면의 🎬 리플레이에서 💾 보관 또는 ⬇ 파일 저장, 메뉴의 보관함에서 다시 보거나 파일을 열 수 있습니다.</li>
+      </ul>
       <h3>🆕 3.0 — 전쟁 시뮬레이터</h3>
       <ul>
         <li><b>부대 지휘</b>: 전투 화면 아래 패널에서 부대를 고르고 명령(자유·전면 공격·방어 유지·집결·후퇴·집중 공격·측면 공격·후방 기습·호위·추격 금지·예비대)을 내립니다. 위치가 필요한 명령은 지도를 클릭하세요. ⚙ 자동 편성으로 역할별 부대를 만들고, 🚩부대 도구로 직접 지정할 수 있습니다.</li>
@@ -247,6 +254,7 @@
 <script src="js/data/units3.js"></script>
 <script src="js/war/supply.js"></script>
 <script src="js/progression/growth.js"></script>
+<script src="js/progression/classes.js"></script>
 <script src="js/modes/survival.js"></script>
 <script src="js/modes/content3.js"></script>
 <script src="js/modes/campaign.js"></script>
