@@ -237,13 +237,53 @@ SW.UNITS = {
   voidcaller: {
     name: '공허술사', family: 'star', size: 13, pop: 7, hp: 420, armor: 2, dmg: 14, atkCd: 1.2, range: 210, speed: 42,
     dmgType: 'magic', attack: 'bolt', projSpeed: 380, keepDist: 150,
-    vortex: { radius: 110, cd: 7, dur: 3, pull: 90, dps: 20 }, glyph: 'ring', accent: '#c07bff',
+    glyph: 'ring', accent: '#c07bff',
     desc: '7초마다 공허 소용돌이를 만들어 적을 한곳에 끌어모으고 피해를 준다.',
   },
   colossus: {
     name: '거신', family: 'star', size: 28, pop: 10, hp: 3200, armor: 8, dmg: 60, atkCd: 2.5, speed: 20,
     splash: 60, onHit: { stunChance: 0.5, stunDur: 1.2 }, glyph: 'x', accent: '#ffe0a0',
     desc: '땅을 내려찍어 넓은 범위에 피해를 주고 50% 확률로 기절시킨다.',
+  },
+
+
+  // ───────────── 2.0 신규 직업 ─────────────
+  swordsman: {
+    name: '검사', family: 'circle', size: 10, pop: 2, hp: 160, armor: 3, dmg: 16, atkCd: 0.9, speed: 58, crit: { chance: 0.1, mult: 1.8 },
+    followUp: 0.35, glyph: 'bar', accent: '#e6f0ff',
+    desc: '전열을 지키는 정예 검사. 기절·넉백된 적에게 35% 추가 피해(후속 공격).',
+  },
+  duelist: {
+    name: '결투가', family: 'diamond', size: 9, pop: 2, hp: 140, armor: 2, dmg: 19, atkCd: 0.7, speed: 88, dodge: 0.3,
+    targeting: 'duel', glyph: 'x', accent: '#ffe08a',
+    desc: '근접 공격의 30%를 회피한다. 가장 강한 근접 유닛과 일대일로 겨룬다.',
+  },
+  shadowstalker: {
+    name: '그림자 추적자', family: 'diamond', size: 9, pop: 2, hp: 95, dmg: 17, atkCd: 0.9, speed: 92,
+    element: 'dark', stealth: { reveal: 3 }, ambush: 2, targeting: 'backline', glyph: 'eye', accent: '#b48cff',
+    desc: '은신한 채 후방을 추적한다. 표식을 남겨 아군의 집중 공격을 유도한다.',
+  },
+  wyvern: {
+    name: '와이번', family: 'diamond', size: 15, pop: 5, hp: 650, armor: 3, dmg: 14, atkCd: 1.4, range: 70, speed: 75,
+    attack: 'breath', cone: 70, element: 'poison', onHit: { poison: { dps: 5, dur: 4, max: 6 } }, flying: true,
+    glyph: 'chevron', accent: '#b8ff7a',
+    desc: '비행 드레이크. 부채꼴 독 브레스로 앞의 적들을 한꺼번에 중독시킨다.',
+  },
+  elementalist: {
+    name: '원소술사', family: 'pentagon', size: 10, pop: 3, hp: 85, dmg: 16, atkCd: 1.4, range: 190, speed: 45,
+    dmgType: 'magic', attack: 'bolt', projSpeed: 360, splash: 20, cycle: ['fire', 'frost', 'lightning'],
+    glyph: 'star', accent: '#ffffff',
+    desc: '공격마다 화염 → 냉기 → 번개 속성을 순환한다.',
+  },
+  bard: {
+    name: '음유시인', family: 'hexagon', size: 10, pop: 2, hp: 95, dmg: 5, atkCd: 1.0, speed: 55, keepDist: 80,
+    aura: { radius: 120, ally: { regen: 3, speed: 0.1 } }, glyph: 'wave', accent: '#ffd0ef',
+    desc: '노래로 주변 아군이 초당 3씩 회복하고 이동속도가 10% 증가한다.',
+  },
+  tactician: {
+    name: '전술가', family: 'hexagon', size: 11, pop: 3, hp: 110, dmg: 6, atkCd: 1.0, speed: 50, keepDist: 110,
+    aura: { radius: 140, ally: { crit: 0.1 } }, glyph: 'eye', accent: '#ffe27a',
+    desc: '주변 아군 치명타 +10%. 위협적인 적을 지목해 아군의 집중 공격을 지휘한다.',
   },
 
   // ───────────── 소환물 (직접 배치 불가 / 샌드박스 배치 가능) ─────────────
@@ -269,8 +309,55 @@ SW.UNITS = {
   },
 };
 
+
+// ───────────── 2.0 메타데이터: 역할 / 속성 / 저항 / 기술 ─────────────
+// role: AI 행동과 타깃 우선순위를 결정
+SW.UNIT_META = {
+  soldier: ['melee', null, 'shieldBash'], spearman: ['lancer', null, 'pierceLunge'], shieldman: ['protector', null, 'shieldWall'],
+  berserker: ['melee', null, 'bloodFrenzy'], healer: ['healer', 'light', 'massHeal'], martyr: ['melee', 'light', 'holyLight'],
+  swordsman: ['melee', null, 'whirlwind'],
+  archer: ['ranged', null, 'focusVolley'], crossbow: ['ranged', null, 'fanBarrage'], sniper: ['sniper', null, 'headshot'],
+  poisoner: ['ranged', 'poison', 'toxicCloud'], catapult: ['siege', null, 'barrage'], ballista: ['siege', null, 'heavyBolt'],
+  guardian: ['protector', null, 'warCry'], ram: ['charger', null, 'shockwave'], golem: ['bruiser', null, 'earthquake'],
+  mirror: ['protector', null, 'mirrorWard'], thorn: ['bruiser', null, 'spikeBurst'], fortress: ['siege', null, 'arrowStorm'],
+  scout: ['skirmisher', null, 'sprint'], assassin: ['assassin', null, 'execute'], phantom: ['assassin', 'dark', 'vanish'],
+  bomber: ['suicide', 'fire', null], bladedancer: ['melee', null, 'bladeStorm'], cavalry: ['charger', null, 'trample'],
+  harpy: ['flyer', null, 'dive'], duelist: ['duelist', null, 'riposte'], shadowstalker: ['assassin', 'dark', 'shadowMark'],
+  wyvern: ['flyer', 'poison', 'venomStorm'],
+  mage: ['mage', 'fire', 'firestorm'], storm: ['mage', 'lightning', 'thunderstorm'], frost: ['mage', 'frost', 'blizzard'],
+  elementalist: ['mage', 'fire', 'elementalBurst'], summoner: ['summoner', 'light', 'greatSummon'],
+  necromancer: ['summoner', 'dark', 'lifeDrain'], meteor: ['mage', 'fire', 'meteorShower'],
+  drummer: ['support', null, 'warDrums'], banner: ['support', null, 'rally'], shielder: ['support', 'light', 'lightBarrier'],
+  priest: ['healer', 'light', 'divineLight'], chrono: ['support', null, 'timeStop'], engineer: ['summoner', null, 'repair'],
+  bard: ['support', 'light', 'balladOfValor'], tactician: ['support', null, 'focusFire'],
+  hero: ['hero', null, 'heroicStrike'], phoenix: ['flyer', 'fire', 'flameBurst'], voidcaller: ['mage', 'dark', 'voidRift'],
+  colossus: ['bruiser', null, 'worldBreaker'],
+  wisp: ['melee', 'light', null], skeleton: ['melee', 'dark', null], turret: ['siege', null, null], egg: ['none', 'fire', null],
+};
+SW.UNIT_RESIST = {
+  phoenix: { fire: 1 }, egg: { fire: 1 }, wyvern: { poison: 1 }, golem: { poison: 1, lightning: 0.3 }, skeleton: { poison: 1, dark: 0.5 },
+  turret: { poison: 1 }, fortress: { poison: 1 }, frost: { frost: 0.5 }, mage: { fire: 0.3 }, storm: { lightning: 0.5 },
+  colossus: { frost: 0.5 }, voidcaller: { dark: 0.5 }, priest: { dark: 0.3 }, mirror: { lightning: 0.3 }, necromancer: { dark: 0.5 },
+};
+// 역할 → 적 분류 (타깃 우선순위 계산용)
+SW.ROLE_CLASS = {
+  melee: 'front', lancer: 'front', protector: 'tank', bruiser: 'tank', charger: 'front', skirmisher: 'front', duelist: 'front',
+  hero: 'front', suicide: 'front', ranged: 'ranged', sniper: 'ranged', siege: 'ranged', mage: 'caster', summoner: 'caster',
+  healer: 'support', support: 'support', assassin: 'assassin', flyer: 'flyer', boss: 'boss', none: 'none',
+};
+SW.ROLE_NAMES = {
+  melee: '근접 전사', lancer: '대형 사냥꾼', protector: '보호자', bruiser: '돌파형 탱커', charger: '돌격병', skirmisher: '교란병',
+  duelist: '결투가', hero: '영웅', suicide: '자폭병', ranged: '사수', sniper: '저격수', siege: '공성', mage: '마법사',
+  summoner: '소환사', healer: '치유사', support: '지원가', assassin: '암살자', flyer: '비행', boss: '보스', none: '-',
+};
+SW.ELEMENTS = {
+  fire: { name: '화염', color: '#ff8a3d', icon: '🔥' }, frost: { name: '냉기', color: '#9fe8ff', icon: '❄️' },
+  lightning: { name: '번개', color: '#fff36b', icon: '⚡' }, poison: { name: '독', color: '#8cff5a', icon: '☠️' },
+  light: { name: '빛', color: '#fff6c0', icon: '✨' }, dark: { name: '어둠', color: '#b48cff', icon: '🌑' },
+};
+
 // 기본값 채우기 및 id 지정
-for (const [id, u] of Object.entries(SW.UNITS)) {
+SW.normalizeUnit = (id, u) => {
   for (const [k, v] of Object.entries(SW.UNIT_DEFAULTS)) if (u[k] === undefined) u[k] = v;
   u.id = id;
   u.shape = SW.FAMILIES[u.family].shape;
@@ -278,10 +365,19 @@ for (const [id, u] of Object.entries(SW.UNITS)) {
   if (u.attack === 'spin' && !u.flying) u.canHitAir = false;
   if (u.attack === 'lob') u.canHitAir = false;
   u.support = !!(u.keepDist || u.attack === 'heal');
-}
+  const m = SW.UNIT_META[id] || ['melee', null, null];
+  if (!u.role) u.role = m[0];
+  if (u.element === undefined) u.element = m[1];
+  if (u.skill === undefined) u.skill = m[2];
+  if (!u.resist) u.resist = SW.UNIT_RESIST[id] || null;
+  if (!u.crit) u.crit = { chance: 0.05, mult: 1.5 };
+  u.cls = SW.ROLE_CLASS[u.role] || 'front';
+  if (u.attack === 'breath') u.canHitAir = true;
+};
+for (const [id, u] of Object.entries(SW.UNITS)) SW.normalizeUnit(id, u);
 
 SW.unitList = (includeSummons) =>
-  Object.values(SW.UNITS).filter(u => includeSummons || !u.summonOnly)
+  Object.values(SW.UNITS).filter(u => !u.boss && (includeSummons || !u.summonOnly))
     .sort((a, b) => SW.FAMILY_ORDER.indexOf(a.family) - SW.FAMILY_ORDER.indexOf(b.family));
 
 // 특성 태그 (UI 표시용)
@@ -323,6 +419,12 @@ SW.unitTraits = (u) => {
   if (u.immobile) t.push('고정형');
   if (u.vortex) t.push('소용돌이');
   if (u.attack === 'explode') t.push('자폭');
-  if (u.crit) t.push('치명타');
+  if (u.crit && u.crit.chance > 0.05) t.push(`치명타 ${Math.round(u.crit.chance * 100)}%`);
+  if (u.dodge) t.push(`회피 ${Math.round(u.dodge * 100)}%`);
+  if (u.attack === 'breath') t.push('부채꼴 브레스');
+  if (u.cycle) t.push('속성 순환');
+  if (u.followUp) t.push('후속 공격');
+  if (u.element) t.push(SW.ELEMENTS[u.element].icon + ' ' + SW.ELEMENTS[u.element].name);
+  if (u.resist) for (const [k, v] of Object.entries(u.resist)) t.push(`${SW.ELEMENTS[k].name} 저항 ${Math.round(v * 100)}%`);
   return t;
 };
