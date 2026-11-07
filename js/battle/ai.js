@@ -129,9 +129,15 @@
       return best;
     },
 
+    // 가까운 반경부터 단계적으로 검색 (밀집 난전에서 수천 번의 거리 계산을 피함)
     nearestEnemy(u, R = 500) {
-      let best = null, bd = R * R;
-      this.enemyQuery(u, R, (e) => { if (e.stealthed) return; const q = dist2(u, e); if (q < bd) { bd = q; best = e; } });
+      let best = null;
+      for (const r of [70, 150, R]) {
+        if (r > R && best) break;
+        let bd = Math.min(r, R) ** 2;
+        this.enemyQuery(u, Math.min(r, R), (e) => { if (e.stealthed) return; const q = dist2(u, e); if (q < bd) { bd = q; best = e; } });
+        if (best || r >= R) break;
+      }
       return best;
     },
 

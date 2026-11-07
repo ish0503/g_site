@@ -67,6 +67,7 @@
       b.addFx({ kind: 'shock', x, y, r: f.radius * 1.5, color: col, T: 0.4 });
       b.particles(x, y, col, 12, 180);
       if (f.radius >= 100) b.shake = Math.max(b.shake || 0, 0.25);
+      if (b.onImpact) b.onImpact(x, y, f.radius, el);
       return true;
     },
     buffSelf(b, u, f) { b.addTimed(u, f.mods, f.dur); b.addFx({ kind: 'ring', x: u.x, y: u.y, r: u.r + 10, color: u.def.accent, T: 0.5 }); return true; },
@@ -223,6 +224,8 @@
       return true;
     },
   };
+
+  SW.ABILITY_OPS = EXEC;    // 3.0 신규 기술이 효과를 추가할 수 있도록 공개
 
   // 전투 시간 기준 지연 실행 (일시정지 시 함께 멈춤)
   function setTimeoutSim(b, delay, fn) {

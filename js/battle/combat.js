@@ -148,6 +148,7 @@
       this.addFx({ kind: 'boom', x, y, r, color: '#ffa040', T: 0.45 });
       this.addFx({ kind: 'shock', x, y, r: r * 1.6, color: '#ffd0a0', T: 0.35 });
       this.particles(x, y, '#ffa040', 14, 160);
+      if (this.onImpact) this.onImpact(x, y, r, 'fire');
     },
 
     heal(o, amt, src, regen) {
@@ -352,6 +353,7 @@
             this.enemiesIn(p.x, p.y, p.splash, p.team, (e) => this.hitP(p, e, p.dmg, true), false);
             this.addFx({ kind: 'boom', x: p.x, y: p.y, r: p.splash, color: '#d9a66b', T: 0.4 });
             this.particles(p.x, p.y, '#b48a5a', 8, 100);
+            if (this.onImpact) this.onImpact(p.x, p.y, p.splash, p.element);
             done = true;
           }
         } else if (p.kind === 'pierce') {
@@ -408,6 +410,7 @@
               this.addFx({ kind: 'shock', x: a.x, y: a.y, r: a.r * 1.8, color: '#ffc090', T: 0.45 });
               this.particles(a.x, a.y, '#ff7a3d', 20, 220);
               this.shake = Math.max(this.shake || 0, 0.3);
+              if (this.onImpact) this.onImpact(a.x, a.y, a.r, a.element);
             } else {
               this.addFx({ kind: 'bolt', x: a.x, y: a.y, color: a.color || '#fff36b', T: 0.3 });
               this.addFx({ kind: 'ring', x: a.x, y: a.y, r: a.r, color: a.color || '#fff36b', T: 0.3 });

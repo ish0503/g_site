@@ -15,8 +15,8 @@ window.SW = window.SW || {};
   SW.SURVIVAL = { pop: 50, interval: 28, TIERS };
 
   // 웨이브 n 의 적 구성 (인원 예산을 무작위 병종에 분배)
-  SW.survivalWave = (n) => {
-    const budget = Math.round(10 + n * 7 + n * n * 0.35);
+  SW.survivalWave = (n, scale = 1) => {
+    const budget = Math.round((10 + n * 7 + n * n * 0.35) * scale);
     const tier = Math.min(TIERS.length - 1, Math.floor((n - 1) / 3));
     const pool = TIERS.slice(0, tier + 1).flat();
     const groups = [];
@@ -33,7 +33,7 @@ window.SW = window.SW || {};
   };
 
   // 전투에 웨이브 진행 로직 연결
-  SW.setupSurvival = (b, onWave) => {
+  SW.setupSurvival = (b, onWave, opts = {}) => {
     const S = { wave: 0, timer: 2, spawned: 0, best: 0 };
     b.survival = S;
     b.hooks.push((bb, dt) => {
@@ -42,7 +42,13 @@ window.SW = window.SW || {};
       if (S.timer <= 0 || (enemies === 0 && S.timer > 3)) {
         if (S.wave > 0 && enemies === 0) S.cleared = S.wave;
         S.wave++; S.timer = SW.SURVIVAL.interval;
-        const w = SW.survivalWave(S.wave);
+        const w = SW.survivalWave(S.wave, opts.scale || 1);
+        // 무한 전쟁: 웨이브마다 아군 증원
+        if (opts.reinforce && S.wave > 1 && opts.pool && opts.pool.length) {
+          let left = opts.reinforce;
+          while (left > 0) { const t = opts.pool[(Math.random() * opts.pool.length) | 0], d = SW.UNITS[t]; if (d.pop > left) break; bb.spawn(t, 0, 40 + Math.random() * 60, 80 + Math.random() * (bb.H - 160)); left -= d.pop; }
+          bb.banner('증원 도착', '#8cb4ff', 1.2);
+        }
         bb.buffs[1] = w.buff; bb.defCache[1] = {};
         for (const [type, cnt] of w.groups) {
           const d = SW.UNITS[type], ranged = d.range > 40 || d.support;

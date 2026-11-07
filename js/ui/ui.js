@@ -24,6 +24,7 @@
     if (name === 'survival') { Battle.open('survival'); name = 'battle'; }
     if (name === 'tree' && current !== 'tree') treeReturn = current;
     if (current === 'battle' && name !== 'battle') Battle.close();
+    if (!$('#screen-' + name) && SW.screens && SW.screens['make_' + name]) SW.screens['make_' + name]();
     $$('.screen').forEach(s => s.classList.remove('active'));
     $('#screen-' + name).classList.add('active');
     current = name;
@@ -33,6 +34,7 @@
     if (name === 'codex') renderCodex();
     if (name === 'raids') renderRaids();
     if (name === 'menu') renderMenu();
+    if (SW.screens && SW.screens[name]) SW.screens[name]();
   }
   document.addEventListener('click', (e) => {
     const g = e.target.closest('[data-go]'); if (g) { e.preventDefault(); go(g.dataset.go); }
@@ -378,11 +380,17 @@
     },
 
     get player() { return this.mode !== 'sandbox'; },
-    deployKey() { return this.mode === 'challenge' ? this.stage.id : this.mode === 'raid' ? 'raid_' + this.raid.boss : this.mode === 'survival' ? 'survival' : null; },
-    worldSize() { if (this.mode !== 'sandbox') return { W: 1600, H: 900 }; const [W, H] = this.map.split('x').map(Number); return { W, H }; },
+    deployKey() { return this.mode === 'challenge' ? this.stage.id : this.mode === 'raid' ? 'raid_' + this.raid.boss : this.mode === 'survival' ? 'survival' : this.mode === 'scenario' ? (this.sc.key || null) : null; },
+    worldSize() {
+      if (this.mode === 'scenario') return { W: this.sc.W || 1600, H: this.sc.H || 900 };
+      if (this.mode !== 'sandbox') return { W: 1600, H: 900 };
+      const [W, H] = this.map.split('x').map(Number); return { W, H };
+    },
 
     open(mode, ctx) {
-      this.mode = mode; this.phase = 'deploy'; this.selected = null;
+      this.mode = mode; this.phase = 'deploy'; this.selected = null; this.replayView = null; this.pick = null; this.selSquad = null;
+      this.sc = mode === 'scenario' ? ctx : null;
+      if (mode !== 'scenario' && mode !== this.lastMode) this.squadDefs = [];
       this.stage = mode === 'challenge' ? ctx : null; this.raid = mode === 'raid' ? ctx : null;
       this.r.resetView(); this.portraitView = true;
       $('#b-result').hidden = true;
@@ -391,7 +399,21 @@
       if (mode !== 'sandbox' && this.brush > 25) { this.brush = 1; segOn('#brush-seg', $('#brush-seg [data-b="1"]')); }
       $('#b-clear-lbl').textContent = mode === 'sandbox' ? ' 모두 지우기' : ' 내 유닛 지우기';
       this.mods = save.mods();
-      if (this.player) {
+      document.body.classList.toggle('mode-scenario', mode === 'scenario');
+      document.body.classList.toggle('mode-sandbox', mode === 'sandbox');
+      if (mode === 'scenario') {
+        const sc = ctx; this.team = 0;
+        $('#b-name').textContent = sc.title; $('#b-sub').textContent = sc.sub || '';
+        this.popLimit = sc.pop || Infinity;
+        this.mods = sc.mods ? sc.mods[0] : this.mods;
+        this.forms = [...(sc.formations || ['free', 'free'])];
+        const key = this.deployKey();
+        const saved = key && sc.restoreDeploy !== false ? (save.data.deploys[key] || []).filter(u => !sc.allowed || sc.allowed.includes(u.type)) : [];
+        this.snapshot = [...sc.units, ...(saved.length && !sc.units.some(u => u.team === 0) ? saved : [])];
+        this.squadDefs = (sc.squads || []).map(q => ({ ...q }));
+        const pal = this.paletteUnits();
+        if (pal.length && !pal.includes(this.sel)) this.sel = pal[0];
+      } else if (this.player) {
         this.team = 0;
         const key = this.deployKey();
         const saved = (save.data.deploys[key] || []).filter(u => this.mods.unlocks.has(u.type));
@@ -427,6 +449,18 @@
 
     newBattle() {
       const { W, H } = this.worldSize();
+      if (this.mode === 'scenario') {
+        const sc = this.sc;
+        return new SW.Battle({ W, H, mods: sc.mods || [this.mods, null], buffs: sc.buffs || [null, null], timeLimit: sc.timeLimit || 600, formations: this.forms,
+          terrain: sc.terrain ? SW.Terrain.from(sc.terrain) : null, weather: sc.weather, time: sc.time, morale: !!sc.morale, victory: sc.victory, points: sc.points,
+          moraleBonus: sc.moraleBonus, endless: !!sc.endless });
+      }
+      if (this.mode === 'sandbox' && this.rules) {
+        const R = this.rules;
+        return new SW.Battle({ W, H, mods: [this.useMods ? save.mods() : null, null], timeLimit: R.timeLimit || 900, formations: this.forms,
+          terrain: this.baseTerrain ? SW.Terrain.from(this.baseTerrain.serialize()) : null, weather: R.weather, time: R.time, morale: R.morale,
+          victory: { type: R.victory || 'annihilate', scoreWin: 100 }, points: R.points, statMul: R.statMul });
+      }
       const mods = this.player ? [this.mods, null] : [this.useMods ? save.mods() : null, null];
       const buffs = this.mode === 'challenge' ? [null, this.stage.buff] : [null, null];
       const timeLimit = { challenge: 180, raid: 300, survival: 1e9, sandbox: 900 }[this.mode];
@@ -434,12 +468,17 @@
     },
     rebuild() {
       this.b = this.newBattle();
-      for (const u of this.snapshot) this.b.spawn(u.type, u.team, u.x, u.y);
+      this.replayView = null;
+      if (this.squadDefs && this.squadDefs.length) { this.b.initSquads(); for (const q of this.squadDefs) this.b.addSquad(q.team, q.name, q.order || 'free'); }
+      for (const u of this.snapshot) this.b.spawn(u.type, u.team, u.x, u.y, u.sq !== undefined || u.vip ? { sq: u.sq, vip: u.vip, fixed: u.fixed } : undefined);
+      if (this.sc && this.sc.setup) this.sc.setup(this.b);
       this.phase = 'deploy'; this.acc = 0; this.selected = null;
       $('#b-result').hidden = true;
       this.updateHud();
     },
-    takeSnapshot() { return this.b.units.map(u => ({ type: u.type, team: u.team, x: u.x, y: u.y })); },
+    takeSnapshot() {
+      return this.b.units.map(u => { const o = { type: u.type, team: u.team, x: u.x, y: u.y }; if (u.sq !== undefined) o.sq = u.sq; if (u.vip) o.vip = true; if (u.fixed) o.fixed = true; return o; });
+    },
     saveDeploy() {
       const key = this.deployKey();
       if (!key || this.phase !== 'deploy') return;
@@ -451,6 +490,7 @@
     usedPop() { let s = 0; for (const u of this.b.units) if (u.team === 0) s += u.def.pop; return s; },
     zone(team = this.team) {
       const W = this.b.W;
+      if (this.mode === 'scenario') return this.sc.zone || { x0: 0, x1: W * 0.4 };
       if (this.player) return { x0: 0, x1: W * 0.4 };
       return team === 0 ? { x0: 0, x1: W * 0.47 } : { x0: W * 0.53, x1: W };
     },
@@ -480,7 +520,7 @@
       if (this.phase !== 'deploy') return;
       const blue = this.b.units.some(u => u.team === 0), red = this.b.units.some(u => u.team === 1);
       if (!blue) { toast('유닛을 배치하세요!'); return; }
-      if (!red && this.mode !== 'survival') { toast('양쪽 팀 모두 유닛이 필요합니다'); return; }
+      if (!red && this.mode !== 'survival' && !(this.sc && this.sc.allowEmptyEnemy)) { toast('양쪽 팀 모두 유닛이 필요합니다'); return; }
       if (this.player && this.usedPop() > this.popLimit) { toast('인원 제한을 초과했습니다'); return; }
       this.saveDeploy();
       this.snapshot = this.takeSnapshot();
@@ -488,6 +528,10 @@
       this.enemyHp0 = this.b.units.filter(u => u.team === 1).reduce((t, u) => t + u.maxHp, 0);
       this.b.formation = [...this.forms];
       if (this.mode === 'survival') SW.setupSurvival(this.b);
+      if (this.sc && this.sc.onStart) this.sc.onStart(this.b);
+      if (this.sc && this.sc.ai) this.sc.ai.forEach((p, t) => { if (p) this.b.addAI(t, p); });
+      if (this.sc && this.sc.frontline) this.b.enableFrontline();
+      if (this.b.units.length < 4000) SW.Recorder.attach(this.b);
       this.b.start();
       this.phase = 'fight'; this.acc = 0;
       if (this.r.zoom > 1) this.r.camX = this.b.W / 2;
@@ -606,6 +650,7 @@
     },
 
     pointer(e, kind) {
+      if (kind === 'down' && this.pick && e.button === 0) { const pw = this.r.toWorld(e.clientX, e.clientY); SW.cmdUI.pointerHook(e, kind, pw); return; }
       if (kind === 'down' && (e.button === 1 || this.tool === 'pan' || (this.phase !== 'deploy' && e.button === 0))) {
         e.preventDefault();
         this.panning = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, click: this.phase !== 'deploy' || this.tool === 'pan' };
@@ -618,6 +663,7 @@
       }
       const p = this.r.toWorld(e.clientX, e.clientY);
       this.mouse = p;
+      if (SW.cmdUI && SW.cmdUI.pointerHook(e, kind, p)) return;
       if (kind === 'down') {
         this.canvas.setPointerCapture?.(e.pointerId);
         this.drag = { erase: e.button === 2 || this.tool === 'erase', last: null };
@@ -638,9 +684,34 @@
       this.updateHud();
     },
 
+    paletteUnits() {
+      const sc = this.sc; if (!sc) return [];
+      if (sc.palette === 'none') return [];
+      let ids = sc.allowed || (sc.palette === 'all' ? SW.unitList().filter(u => !u.custom).map(u => u.id) : SW.unitList().filter(u => this.mods.unlocks.has(u.id)).map(u => u.id));
+      if (sc.extraUnits) ids = [...ids, ...sc.extraUnits.filter(x => !ids.includes(x))];
+      return ids;
+    },
     renderPalette() {
       const list = $('#palette-list'); list.innerHTML = '';
       const ch = this.player;
+      if (this.mode === 'scenario') {
+        const ids = this.paletteUnits();
+        if (!ids.length) { list.appendChild(el('div', 'pal-msg', this.sc.palette === 'none' && this.sc.lockMsg ? this.sc.lockMsg : '이 모드에서는 유닛을 추가할 수 없습니다. 유닛을 드래그해 위치만 바꿀 수 있습니다.')); return; }
+        const addU = (u) => {
+          const b = el('div', 'pu' + (this.sel === u.id ? ' on' : ''));
+          b.appendChild(icon(u.id, 0, 26)); b.appendChild(el('span', 'pn', u.name)); b.appendChild(el('span', 'pp', u.pop ? '👤' + u.pop : '-'));
+          b.onclick = () => { this.sel = u.id; this.renderPalette(); this.showInfo(u.id); if (this.tool !== 'place') { this.tool = 'place'; segOn('#tool-seg', $('#tool-seg [data-tool=place]')); } };
+          b.onmouseenter = () => { if (!this.selected) this.showInfo(u.id); };
+          list.appendChild(b);
+        };
+        for (const f of [...SW.FAMILY_ORDER, 'structure']) {
+          const us = ids.map(id => SW.UNITS[id]).filter(u => u && u.family === f);
+          if (!us.length) continue;
+          list.appendChild(el('div', 'fam', `${SW.FAMILIES[f].name} · ${SW.FAMILIES[f].title}`));
+          us.forEach(addU);
+        }
+        return;
+      }
       const addUnit = (u, locked) => {
         const b = el('div', 'pu' + (this.sel === u.id ? ' on' : '') + (locked ? ' locked' : ''));
         b.appendChild(icon(u.id, this.team, 26));
@@ -655,7 +726,7 @@
         list.appendChild(b);
       };
       for (const f of SW.FAMILY_ORDER) {
-        const units = SW.unitList(!ch).filter(u => u.family === f);
+        const units = SW.unitList(!ch).filter(u => u.family === f && !u.custom && !(u.summonOnly && (u.structure || u.commander)));
         if (ch && !units.some(u => this.mods.unlocks.has(u.id)) && !save.data.skills.includes(SW.SKILL_TREES[f][0].id)) {
           list.appendChild(el('div', 'fam', `${SW.FAMILIES[f].name} · ${SW.FAMILIES[f].title} 🔒`));
           continue;
@@ -664,6 +735,10 @@
         for (const u of units) addUnit(u, ch && !this.mods.unlocks.has(u.id));
       }
       if (!ch) {
+        list.appendChild(el('div', 'fam', '🏰 구조물 · 지휘관'));
+        for (const id of ['commander', 'wall', 'gate', 'tower', 'keep']) addUnit(SW.UNITS[id], false);
+        const cus = Object.keys(SW.UNITS).filter(k => SW.UNITS[k].custom);
+        if (cus.length) { list.appendChild(el('div', 'fam', '🛠 커스텀 유닛')); for (const id of cus) addUnit(SW.UNITS[id], false); }
         list.appendChild(el('div', 'fam', '💀 보스'));
         for (const id of Object.keys(SW.BOSS_UNITS)) if (SW.UNITS[id].bossData) addUnit(SW.UNITS[id], false);
       }
@@ -708,7 +783,7 @@
       const pop = $('#b-pop');
       if (this.player) {
         const used = this.phase === 'deploy' ? this.usedPop() : this.startPop;
-        pop.hidden = false; pop.textContent = `👤 ${used} / ${this.popLimit}`;
+        pop.hidden = false; pop.textContent = `👤 ${used}${isFinite(this.popLimit) ? ' / ' + this.popLimit : ' · 제한 없음'}`;
         pop.classList.toggle('over', used > this.popLimit);
       } else pop.hidden = true;
       const cnt = [0, 0]; for (const u of this.b.units) cnt[u.team]++;
@@ -740,6 +815,14 @@
     frame(t) {
       const dtReal = Math.min(0.05, ((t - (this.lastT || t)) / 1000)); this.lastT = t;
       if (current !== 'battle' || !this.b) return;
+      // 리플레이 재생 중
+      if (this.replayView) {
+        const v = this.replayView; v.tick(dtReal);
+        const selU = this.replaySel !== undefined ? v.units.find(u => u.uid === this.replaySel) : null;
+        this.r.draw(v, { selected: selU, trail: this.replaySel !== undefined ? v.trail(this.replaySel) : null });
+        SW.cmdUI.drawMinimap(v); SW.cmdUI.updateReplayBar();
+        return;
+      }
       const b = this.b;
       b.quality = autoQuality(b.units.length);
       this.r.showAuras = settings().auras;
@@ -757,7 +840,7 @@
         if (this._hudT > 0.25) { this._hudT = 0; this.updateHud(); if (this.infoInst) this.showInfo(this.infoInst.type, this.infoInst); }
       }
       if (this.selected && !this.selected.alive && this.phase === 'fight') { /* 사망한 선택 유닛은 정보 유지 */ }
-      const ui = { hover: this.hover, selected: this.selected, deploy: this.phase === 'deploy', showForm: this.phase === 'fight' };
+      const ui = { hover: this.hover, selected: this.selected, deploy: this.phase === 'deploy', showForm: this.phase === 'fight', squads: !!b.squads, selSquad: this.selSquad, squadTeam: this.mode === 'sandbox' || (this.sc && this.sc.spectate) ? undefined : 0 };
       if (this.phase === 'deploy') {
         const z = this.zone();
         if (this.player) ui.zones = [{ x0: z.x0, x1: z.x1, color: 'rgba(63,124,255,0.07)', line: 'rgba(63,124,255,0.5)' }];
@@ -777,6 +860,7 @@
       }
       const r0 = performance.now();
       this.r.draw(b, ui);
+      if (SW.cmdUI) SW.cmdUI.afterFrame(b, dtReal);
       if (settings().fps) {
         this._fps = (this._fps || 60) * 0.95 + (dtReal > 0 ? 1 / dtReal : 60) * 0.05;
         $('#b-fps').hidden = false;
@@ -813,10 +897,19 @@
       if (A.mvp) h += `<div class="ana-line">🏅 최고 피해: <b>${SW.UNITS[A.mvp[0]].name}</b> (${fmt(A.mvp[1].dealt)})</div>`;
       if (life) h += `<div class="ana-line">🛡 최장 생존: <b>${SW.UNITS[life.type].name}</b> (${life.life.toFixed(1)}초)</div>`;
       h += `<div class="ana-line">🎯 결정적 요인: <b>${A.factor}</b></div>`;
-      h += `<details><summary>유닛별 효율 보기</summary><table class="ana-table"><tr><th>유닛</th><th>수</th><th>생존</th><th>피해</th><th>받음</th><th>치유</th><th>처치</th><th>효율</th></tr>`;
-      for (const [t, r] of A.types.slice(0, 14)) {
-        const d = SW.UNITS[t], eff = d.pop ? r.dealt / (r.n * d.pop) : 0;
-        h += `<tr><td>${d.name}</td><td>${r.n}</td><td>${A.alive[t] || 0}</td><td>${fmt(r.dealt)}</td><td>${fmt(r.taken)}</td><td>${fmt(r.healed)}</td><td>${r.kills}</td><td>${d.pop ? fmt(eff) : '-'}</td></tr>`;
+      const n0 = A.types.reduce((s, [, r]) => s + r.n, 0), lost = A.types.reduce((s, [, r]) => s + r.died, 0);
+      h += `<div class="ana-line">❤️ 생존율 <b>${n0 ? Math.round((1 - lost / n0) * 100) : 0}%</b> · 🛡 보호막 흡수 <b>${fmt(A.S.absorbed || 0)}</b>${b.formTime && b.formTime[team] ? ` · 진형 유지 <b>${b.formTime[team]}초</b>` : ''}${b.cmdUses && b.cmdUses[team] ? ` · 지휘 능력 <b>${b.cmdUses[team]}회</b>` : ''}</div>`;
+      if (team === 0 && b.orderStats && Object.keys(b.orderStats).length) {
+        h += '<div class="ana-line">📜 명령별 효율 (유닛·초당 피해): ' + Object.entries(b.orderStats).filter(([, o]) => o.time > 0).map(([k, o]) => `${SW.ORDERS[k].icon}${SW.ORDERS[k].name} <b>${(o.dealt / o.time).toFixed(1)}</b>`).join(' · ') + '</div>';
+        const tac = (b.orderLog || []).filter(o => o.team === 0 && (o.type === 'flank' || o.type === 'rear'));
+        if (tac.length) { const ok = b.squads.filter(q => q.team === 0 && q.order.done).length; h += `<div class="ana-line">🗡 우회 전술 성공률 <b>${Math.round(ok / tac.length * 100)}%</b> (${ok}/${tac.length})</div>`; }
+      }
+      const evs = (b.events || []).filter(e => e.kind !== 'order' && e.kind !== 'ai' && (e.team === team || e.team === -1 || e.kind === 'commander' || e.kind === 'front' || e.kind === 'boss')).slice(0, 14);
+      if (evs.length && team === 0) h += `<details><summary>⏱ 주요 사건 (${evs.length})</summary><ul class="ev">${evs.map(e => `<li><span class="muted">${Math.floor(e.t / 60)}:${String(Math.floor(e.t % 60)).padStart(2, '0')}</span> ${e.text}</li>`).join('')}</ul></details>`;
+      h += `<details><summary>유닛별 효율 보기</summary><table class="ana-table"><tr><th>유닛</th><th>수</th><th>생존</th><th>피해</th><th>DPS</th><th>받음</th><th>치유</th><th>처치</th><th>효율</th></tr>`;
+      for (const [t, r] of A.types.slice(0, 16)) {
+        const d = SW.UNITS[t], eff = d.pop ? r.dealt / (r.n * d.pop) : 0, dps = r.life > 0 ? r.dealt / r.life : 0;
+        h += `<tr><td>${d.name}</td><td>${r.n}</td><td>${A.alive[t] || 0}</td><td>${fmt(r.dealt)}</td><td>${dps.toFixed(1)}</td><td>${fmt(r.taken)}</td><td>${fmt(r.healed)}</td><td>${r.kills}</td><td>${d.pop ? fmt(eff) : '-'}</td></tr>`;
       }
       h += '</table><div class="muted small">효율 = 인원 1당 가한 피해</div></details></div>';
       return h;
@@ -833,6 +926,7 @@
       if (this.mode === 'challenge' || this.mode === 'raid') {
         const isRaid = this.mode === 'raid', key = isRaid ? this.raid.boss : this.stage.id, base = isRaid ? this.raid.reward : this.stage.reward;
         const clearedMap = isRaid ? save.data.raids : save.data.cleared;
+        this._clearedBefore = !!clearedMap[key];
         if (win) {
           const first = !clearedMap[key];
           let g = base * (first ? 1 : 0.3);
@@ -865,9 +959,26 @@
         pay(g);
         title = `<h2 class="${waves >= 5 ? 'win' : 'lose'}">웨이브 ${waves} 생존</h2>`;
         rows += `<div>버틴 웨이브 <b>${waves}${best ? ' 🏆 신기록!' : ''}</b></div><div>생존 보상 <b>💰 ${fmt(g)}</b></div><div>처치한 적 <b>${b.stats[0].kills}</b></div>`;
+      } else if (this.mode === 'scenario') {
+        const res = (this.sc.onFinish && this.sc.onFinish(b, win, this)) || {};
+        title = res.title || (win ? '<h2 class="win">승리!</h2>' : '<h2 class="lose">패배</h2>');
+        rows += res.rows || '';
+        this._extraBtns = res.buttons || [];
       } else {
         title = b.winner === 0 ? '<h2 class="win" style="color:#8cb4ff">파란 팀 승리</h2>' : b.winner === 1 ? '<h2 class="lose">빨간 팀 승리</h2>' : '<h2>무승부</h2>';
       }
+      if (b.endReason) rows = `<div class="muted">결과: ${b.endReason}</div>` + rows;
+      // 성장: 경험치 · 자원
+      const xpMode = this.mode === 'challenge' || this.mode === 'raid' || this.mode === 'survival' || (this.sc && this.sc.xp);
+      if (xpMode && SW.awardXP) {
+        const ups = SW.awardXP(b, win ? 1 : 0.5);
+        const res = this.mode === 'raid' ? (win ? { crystal: 2, mana: 20, ore: 10 } : { ore: 3 }) : this.mode === 'survival' ? { ore: Math.max(0, b.survival.wave - 1) * 2, food: 10 }
+          : this.mode === 'challenge' ? (win ? { ore: 6, wood: 6, food: 10, crystal: this.stage.index % 5 === 4 && !this._clearedBefore ? 1 : 0 } : { ore: 2 }) : null;
+        if (res) { SW.gain(res); const t = SW.costText(res); if (t) rows += `<div>자원 획득 <b>${t}</b></div>`; }
+        if (ups.length) rows += `<div style="color:#ffe27a">⬆ 레벨 업: ${ups.slice(0, 6).join(', ')}${ups.length > 6 ? ' 외 ' + (ups.length - 6) : ''}</div>`;
+        save.write(); updateGold();
+      }
+      SW.Recorder.finalize(b);
       const box = el('div', 'box');
       let anaHTML = this.analysisHTML(0, this.mode === 'sandbox' ? '🔵 파란 팀 분석' : '📊 전투 분석');
       if (this.mode === 'sandbox') anaHTML += this.analysisHTML(1, '🔴 빨간 팀 분석');
@@ -882,7 +993,10 @@
         B('스테이지 선택', '', () => go('stages'));
       } else if (this.mode === 'raid') { B('🌳 스킬 트리', '', () => go('tree')); B('레이드 목록', '', () => go('raids')); }
       else if (this.mode === 'survival') B('🌳 스킬 트리', '', () => go('tree'));
-      else B('결과 닫기', '', () => { $('#b-result').hidden = true; });
+      else if (this.mode !== 'scenario') B('결과 닫기', '', () => { $('#b-result').hidden = true; });
+      for (const x of this._extraBtns || []) B(x.text, x.cls || '', x.fn);
+      this._extraBtns = null;
+      if (b.replay) B('🎬 리플레이', '', () => SW.cmdUI.startReplay(b.replay));
       box.appendChild(btns);
       const r = $('#b-result'); r.innerHTML = ''; r.appendChild(box); r.hidden = false;
     },
@@ -893,5 +1007,5 @@
   Battle.init();
   MenuBG.init();
   go('menu');
-  SW.ui = { go, Battle, Tree };
+  SW.ui = { go, Battle, Tree, toast, icon, el, $, $$, fmt, segOn, updateGold, unitCard, statsHTML, current: () => current };
 })();

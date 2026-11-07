@@ -199,7 +199,8 @@ window.SW = window.SW || {};
       this.updateProjectiles(dt);
       this.updateAreas(dt);
       this.frame = (this.frame || 0) + 1;
-      if (!big || this.frame % 2 === 0) this.separate();    // 대규모 전투: 충돌 처리 격프레임
+      const sepEvery = this.units.length > 1500 ? 3 : big ? 2 : 1;
+      if (this.frame % sepEvery === 0) this.separate();    // 대규모 전투: 충돌 처리 빈도 조절
       this.cleanupDead();                     // 8. Death
       for (const h of this.hooks) h(this, dt);
       if (this.visual) this.updateFx(dt);
@@ -248,16 +249,29 @@ window.SW = window.SW || {};
           }
         }
       }
+      // 오라는 0.2초마다 다시 계산해 유닛별로 캐시 (대규모 전투 최적화)
+      this._abT = (this._abT || 0) - dt;
+      if (this._abT <= 0) {
+        this._abT = 0.2;
+        for (const u of this.units) u.ab = null;
+        for (const u of this.units) {
+          const a = u.def.aura; if (!u.alive || !a) continue;
+          const eff = 1 + (this.fm(u.team).supportEff || 0);
+          if (a.ally) this.alliesIn(u.x, u.y, a.radius, u.team, (o) => {
+            if (o === u && u.type !== 'hero') return;
+            const ab = o.ab || (o.ab = {});
+            for (const k in a.ally) { const v = a.ally[k] * eff; if (!(ab[k] >= v)) ab[k] = v; }
+          });
+          if (a.enemy) this.enemiesIn(u.x, u.y, a.radius, u.team, (o) => {
+            const ab = o.ab || (o.ab = {});
+            for (const k in a.enemy) if (!(ab[k] >= a.enemy[k])) ab[k] = a.enemy[k];
+          });
+        }
+      }
       for (const u of this.units) {
-        const a = u.def.aura; if (!u.alive || !a) continue;
-        const eff = 1 + (this.fm(u.team).supportEff || 0);
-        if (a.ally) this.alliesIn(u.x, u.y, a.radius, u.team, (o) => {
-          if (o === u && u.type !== 'hero') return;
-          for (const k in a.ally) o.buff[k] = Math.max(o.buff[k], a.ally[k] * eff);
-        });
-        if (a.enemy) this.enemiesIn(u.x, u.y, a.radius, u.team, (o) => {
-          for (const k in a.enemy) o.buff[k] = Math.max(o.buff[k], a.enemy[k]);
-        });
+        const ab = u.ab; if (!ab) continue;
+        const b = u.buff;
+        for (const k in ab) if (ab[k] > b[k]) b[k] = ab[k];
       }
     }
     addTimed(u, mods, dur) { u.timed.push({ mods, t: dur }); }
@@ -300,7 +314,8 @@ window.SW = window.SW || {};
       // AI 판단 (유닛별 분산 주기)
       u.ai.think -= dt; u.ai.hold -= dt;
       if (u.ai.think <= 0) {
-        u.ai.think = (big ? 0.35 : 0.22) + rand() * 0.18;
+        // 전투와 먼 유닛은 판단 주기를 늘린다 (중요도 기반 업데이트 빈도)
+        u.ai.think = (u.nearD > 650 ? 0.6 : big ? (this.units.length > 1500 ? 0.5 : 0.35) : 0.22) + rand() * 0.18;
         this.think(u);
         if (!u.alive) return;
       }
