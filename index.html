@@ -45,7 +45,7 @@
       <h2>스킬 트리</h2>
       <div class="spacer"></div>
       <span class="gold">💰 <b class="gold-amt">0</b></span>
-      <button class="btn danger" id="tree-reset">스킬 초기화 (전액 환불)</button>
+      <button class="btn danger" id="tree-reset">↺<span class="lbl"> 스킬 초기화 (전액 환불)</span></button>
     </header>
     <nav id="tree-tabs" class="tabs"></nav>
     <div class="tree-body">
@@ -75,6 +75,7 @@
       <h3>⚔️ 챌린지 모드</h3>
       <p>스테이지마다 정해진 적 군대가 배치되어 있습니다. <b>인원 제한</b> 안에서 왼쪽(파란) 진영에 유닛을 배치하고 전투를 시작하세요. 유닛마다 차지하는 인원(👤)이 다릅니다.</p>
       <p>승리하면 <b>골드</b>를 얻습니다. 첫 클리어 시 전액, 재도전 시 30%. 인원을 70% 이하로 사용해 이기면 <b>효율 보너스 +30%</b>.</p>
+      <p><b>패배해도</b> 쓰러뜨린 적의 비율만큼 골드를 받습니다 (최대 보상의 40%). 스테이지가 어렵다면 지면서 모은 골드로 스킬 트리를 강화해 다시 도전하세요.</p>
       <h3>🌳 스킬 트리</h3>
       <p>도형마다 하나의 계열(스킬 트리)이 있습니다. 골드로 노드를 구매해 <b>스탯을 강화</b>하고 <b>새 유닛을 해금</b>하고 <b>특수 능력</b>을 얻으세요. 일부 계열은 특정 스테이지를 클리어해야 열립니다. 스킬은 언제든지 전액 환불받고 초기화할 수 있습니다.</p>
       <h3>🧪 샌드박스 모드</h3>
@@ -83,6 +84,7 @@
       <ul>
         <li><b>왼쪽 클릭/드래그</b>: 선택한 유닛 배치 (브러시 크기로 한 번에 여러 기)</li>
         <li><b>오른쪽 클릭/드래그</b> 또는 <b>지우개</b>: 유닛 제거</li>
+        <li><b>모바일</b>: 탭/드래그로 배치, 두 손가락으로 확대·이동, ⓘ 버튼으로 유닛 정보</li>
         <li><b>마우스 휠</b> 또는 ＋/－: 확대·축소 · <b>휠 버튼 드래그</b>, <b>✋ 이동</b> 도구, 전투 중 드래그: 화면 이동</li>
         <li>유닛 위에 마우스를 올리면 정보 표시</li>
         <li><b>Space</b>: 시작/일시정지 · <b>1·2·3·4</b>: 배속 · <b>R</b>: 재배치</li>
@@ -101,7 +103,7 @@
   <!-- 전투 -->
   <section id="screen-battle" class="screen">
     <header class="bar battle-bar">
-      <button class="btn" id="b-back">← 나가기</button>
+      <button class="btn" id="b-back">←<span class="lbl"> 나가기</span></button>
       <div class="b-title"><b id="b-name"></b><span id="b-sub" class="muted"></span></div>
       <div id="b-pop" class="pill"></div>
       <div id="b-count" class="pill counts"></div>
@@ -112,8 +114,8 @@
         <div class="speed" id="b-speed">
           <button data-sp="0.5">½×</button><button data-sp="1" class="on">1×</button><button data-sp="2">2×</button><button data-sp="4">4×</button>
         </div>
-        <button class="btn" id="b-reset" title="배치 상태로 되돌리기 (R)">↺ 재배치</button>
-        <button class="btn" id="b-clear">🗑 모두 지우기</button>
+        <button class="btn" id="b-reset" title="배치 상태로 되돌리기 (R)">↺<span class="lbl"> 재배치</span></button>
+        <button class="btn" id="b-clear">🗑<span class="lbl" id="b-clear-lbl"> 모두 지우기</span></button>
       </div>
     </header>
     <div class="battle-main">
@@ -128,6 +130,7 @@
           </div>
           <label class="chk"><input type="checkbox" id="sb-mods"> 파란 팀에 내 스킬 적용</label>
         </div>
+        <div class="tools2">
         <div class="tool-row">
           <div class="seg" id="tool-seg">
             <button data-tool="place" class="on">✏️배치</button><button data-tool="erase">🧽지우기</button><button data-tool="pan">✋이동</button>
@@ -139,12 +142,13 @@
             <button data-b="1" class="on">1</button><button data-b="5">5</button><button data-b="10">10</button><button data-b="25">25</button>
           </div>
         </div>
+        </div>
         <div id="palette-list" class="palette-list"></div>
       </aside>
       <div class="canvas-wrap">
         <canvas id="battle-canvas"></canvas>
         <div id="b-timer" class="timer"></div>
-        <div class="zoom-ctl"><button id="z-in" title="확대 (마우스 휠)">＋</button><button id="z-out" title="축소">－</button><button id="z-fit" title="전체 보기">⤢</button></div>
+        <div class="zoom-ctl"><button id="z-in" title="확대 (마우스 휠)">＋</button><button id="z-out" title="축소">－</button><button id="z-fit" title="전체 보기">⤢</button><button id="z-info" class="m-only" title="유닛 정보">ⓘ</button></div>
         <div id="b-hint" class="hint"></div>
         <div id="b-result" class="result" hidden></div>
       </div>

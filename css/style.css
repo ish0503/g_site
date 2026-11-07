@@ -25,7 +25,7 @@ button { font: inherit; color: inherit; }
 .bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .bar h2 { margin: 0; font-size: 18px; }
 .gold { color: var(--gold); font-size: 16px; }
-.pill { background: var(--panel2); border: 1px solid var(--line); border-radius: 99px; padding: 4px 10px; font-size: 13px; }
+.pill { white-space: nowrap; background: var(--panel2); border: 1px solid var(--line); border-radius: 99px; padding: 4px 10px; font-size: 13px; }
 .pill.over { border-color: var(--red); color: #ff9a9a; }
 
 /* 메뉴 */
@@ -129,6 +129,7 @@ button { font: inherit; color: inherit; }
 .pu .pp { font-size: 11px; color: var(--muted); }
 .tool-row { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
 .tool-row .seg { flex: 1; } .tool-row .seg button { flex: 1; font-size: 12.5px; padding: 6px 4px; white-space: nowrap; }
+.tools2 { display: flex; flex-direction: column; gap: 8px; }
 .sb-tools { display: flex; flex-direction: column; gap: 6px; }
 .sb-tools .seg button { flex: 1; } .sb-tools .seg { display: flex; }
 .sb-tools .row { display: flex; gap: 6px; } .sb-tools .row .btn { flex: 1; }
@@ -164,16 +165,89 @@ button { font: inherit; color: inherit; }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; } ::-webkit-scrollbar-thumb { background: #2a3446; border-radius: 4px; }
 
-/* 모바일 */
+.m-only { display: none !important; }
+
+/* 모바일 (세로) */
 @media (max-width: 900px) {
-  .battle-main { flex-direction: column; }
-  .palette { width: auto; order: 2; max-height: 34vh; }
-  .palette-list { flex-direction: row; flex-wrap: wrap; }
-  .palette-list .fam { width: 100%; }
-  .pu { width: calc(50% - 2px); }
+  .m-only { display: block !important; }
+  .lbl { display: none; }
+  .bar { padding: 6px 8px; gap: 6px; }
+  .bar h2 { font-size: 16px; }
+  .btn { padding: 6px 9px; }
+  .battle-bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .battle-bar::-webkit-scrollbar { display: none; }
+  .battle-bar .spacer { display: none; }
+  .b-title { min-width: 0; flex-shrink: 1; }
+  .b-title b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 32vw; display: block; }
+  .b-title span { display: none; }
+  .ctrl { flex-wrap: nowrap; }
+  .speed button { padding: 6px 7px; }
+  #b-start { padding: 6px 10px; }
+
+  .battle-main { flex-direction: column; padding: 4px; gap: 4px; }
+  .canvas-wrap { order: 1; flex: 1; min-height: 180px; border-radius: 8px; }
+  .palette { order: 2; width: auto; padding: 6px; gap: 5px; max-height: none; flex-shrink: 0; }
+  .sb-tools { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; gap: 5px; align-items: center; }
+  .sb-tools .seg { flex-shrink: 0; }
+  .sb-tools .seg button { padding: 5px 8px; font-size: 12px; }
+  .sb-tools .row { flex-shrink: 0; }
+  .chk { white-space: nowrap; flex-shrink: 0; }
+  .tool-row { gap: 4px; }
+  .tool-row .muted { display: none; }
+  .tools2 { flex-direction: row; gap: 6px; } .tools2 .tool-row { flex: 1; }
+  .palette-list { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; gap: 4px; padding-bottom: 2px; flex: none; -webkit-overflow-scrolling: touch; }
+  .palette-list .fam { writing-mode: vertical-rl; font-size: 10px; margin: 0; padding: 0 2px; border-left: 1px solid var(--line); flex-shrink: 0; max-height: 64px; overflow: hidden; }
+  .pu { flex-direction: column; width: 62px; flex-shrink: 0; gap: 1px; padding: 4px 2px; font-size: 11px; text-align: center; }
+  .pu canvas { width: 28px; height: 28px; }
+  .pu .pn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 58px; }
+  .pu .pp { font-size: 10px; }
+
   .info { display: none; }
-  .canvas-wrap { order: 1; flex: 1; min-height: 200px; }
-  .tree-body { flex-direction: column; }
-  .tree-detail { width: auto; max-height: 34vh; }
-  .battle-bar .b-title span { display: none; }
+  body.show-info .info { display: block; position: fixed; left: 8px; right: 8px; top: 56px; width: auto; max-height: 55vh; z-index: 50; box-shadow: 0 10px 40px rgba(0,0,0,.6); }
+  .zoom-ctl button { width: 36px; height: 36px; }
+  .timer { top: 6px; font-size: 12px; }
+  .hint { font-size: 11.5px; bottom: 6px; padding: 4px 8px; }
+  .result .box { padding: 18px 16px; min-width: 0; width: 92%; }
+  .result h2 { font-size: 28px; }
+  .result .rows { font-size: 13px; }
+
+  .tabs { padding: 6px 8px 0; }
+  .tabs button { padding: 6px 10px; font-size: 13px; }
+  .tree-body { flex-direction: column; padding: 0 8px 8px; gap: 8px; }
+  .tree-view { flex: 1; min-height: 0; }
+  .tree-detail { width: auto; max-height: 38vh; flex-shrink: 0; padding: 10px; }
+  .node { width: 120px; }
+  .stage-grid { padding: 10px; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+  .stage { padding: 10px; }
+  .stage .nm { font-size: 14px; }
+  .stage .meta { flex-wrap: wrap; gap: 4px 8px; }
+  .codex { padding: 10px; }
+  .codex .cards { grid-template-columns: 1fr; }
+  .help { padding: 10px 14px; font-size: 14px; }
+  .logo { font-size: 32px; }
+  .btn.big { font-size: 16px; padding: 11px 16px; }
+}
+
+/* 모바일 (가로, 낮은 화면) */
+@media (max-height: 520px) and (orientation: landscape) {
+  .lbl { display: none; }
+  .m-only { display: block !important; }
+  .bar { padding: 4px 8px; }
+  .battle-bar { flex-wrap: nowrap; overflow-x: auto; }
+  .b-title span { display: none; }
+  .battle-main { flex-direction: row; padding: 4px; gap: 4px; }
+  .canvas-wrap { order: 2; }
+  .tools2 { flex-direction: column; gap: 4px; }
+  .sb-tools { flex-direction: column; align-items: stretch; }
+  .tools2 .seg button { font-size: 11px; padding: 5px 2px; }
+  .palette { order: 1; width: 170px; max-height: none; padding: 5px; gap: 4px; }
+  .palette-list { flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+  .palette-list .fam { writing-mode: horizontal-tb; border: none; max-height: none; }
+  .pu { flex-direction: row; width: auto; font-size: 12px; text-align: left; }
+  .pu canvas { width: 22px; height: 22px; }
+  .info { display: none; }
+  body.show-info .info { display: block; position: fixed; right: 8px; top: 48px; bottom: 8px; width: 240px; z-index: 50; }
+  .tree-body { flex-direction: row; }
+  .tree-detail { max-height: none; width: 240px; }
+  .menu-box { padding: 14px; } .subtitle { margin-bottom: 10px; } .menu-buttons { gap: 6px; } .btn.big { padding: 7px; font-size: 15px; } .logo { font-size: 26px; }
 }

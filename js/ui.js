@@ -156,6 +156,7 @@
         inner.appendChild(e);
       }
       view.appendChild(inner);
+      if (this._centeredFam !== this.fam) { this._centeredFam = this.fam; view.scrollLeft = Math.max(0, (inner.offsetWidth - view.clientWidth) / 2); }
       if (hidden) view.appendChild(el('div', 'tree-fog', `🌫️ 아직 드러나지 않은 노드 ${hidden}개 · 노드를 습득하면 다음 단계가 나타납니다`));
       this.renderDetail();
     },
@@ -251,9 +252,34 @@
       this.r = new SW.Renderer(this.canvas);
       const c = this.canvas;
       c.addEventListener('contextmenu', e => e.preventDefault());
-      c.addEventListener('pointerdown', e => this.pointer(e, 'down'));
-      c.addEventListener('pointermove', e => this.pointer(e, 'move'));
-      window.addEventListener('pointerup', () => { this.drag = null; this.panning = null; });
+      this.touches = new Map();
+      c.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (!this.pinchCheck()) this.pointer(e, 'down'); });
+      c.addEventListener('pointermove', e => {
+        if (e.pointerType === 'touch' && this.touches.has(e.pointerId)) {
+          const prev = this.touches.get(e.pointerId);
+          if (this.pinch) {
+            const pts = [...this.touches.values()];
+            const oldMid = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+            const oldD = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
+            prev.x = e.clientX; prev.y = e.clientY;
+            const mid = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+            const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
+            this.r.pan(mid.x - oldMid.x, mid.y - oldMid.y);
+            this.r.zoomAt(mid.x, mid.y, d / oldD);
+            return;
+          }
+          prev.x = e.clientX; prev.y = e.clientY;
+        }
+        this.pointer(e, 'move');
+      });
+      const up = (e) => {
+        this.drag = null; this.panning = null;
+        if (e.pointerType === 'touch') { this.touches.delete(e.pointerId); if (this.touches.size < 2) this.pinch = false; this.mouse = null; this.hover = null; }
+      };
+      window.addEventListener('pointerup', up);
+      window.addEventListener('pointercancel', up);
+      $('#z-info').onclick = () => document.body.classList.toggle('show-info');
+      $('#b-info').onclick = () => document.body.classList.remove('show-info');
       c.addEventListener('wheel', e => { e.preventDefault(); this.r.zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.15 : 1 / 1.15); }, { passive: false });
       const zc = () => { const r = c.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
       $('#z-in').onclick = () => this.r.zoomAt(...zc(), 1.4);
@@ -285,9 +311,10 @@
     open(mode, stage) {
       this.mode = mode; this.stage = stage || null; this.phase = 'deploy'; this.paused = false;
       this.r.resetView();
+      this.portraitView = true;
       $('#b-result').hidden = true;
       $('#sb-tools').style.display = mode === 'sandbox' ? '' : 'none';
-      $('#b-clear').textContent = mode === 'sandbox' ? '🗑 모두 지우기' : '🗑 내 유닛 지우기';
+      $('#b-clear-lbl').textContent = mode === 'sandbox' ? ' 모두 지우기' : ' 내 유닛 지우기';
       if (mode === 'challenge') {
         this.team = 0;
         this.mods = save.mods();
@@ -344,7 +371,9 @@
       this.saveDeploy();
       this.snapshot = this.takeSnapshot();
       this.startPop = this.usedPop();
+      this.enemyHp0 = this.b.units.filter(u => u.team === 1).reduce((t, u) => t + u.maxHp, 0);
       this.phase = 'fight'; this.paused = false; this.acc = 0;
+      if (this.r.zoom > 1) this.r.camX = SW.WORLD.W / 2;
       this.updateHud();
     },
     togglePause() { if (this.phase === 'fight') { this.paused = !this.paused; this.updateHud(); } },
@@ -416,6 +445,11 @@
         if (this.mode === 'challenge' && u.team !== 0) return true;
         return (u.x - x) ** 2 + (u.y - y) ** 2 > (r + u.r) ** 2;
       });
+    },
+
+    pinchCheck() {
+      if (this.touches.size >= 2) { this.pinch = true; this.drag = null; this.panning = null; this.mouse = null; return true; }
+      return this.pinch;
     },
 
     pointer(e, kind) {
@@ -522,7 +556,10 @@
       $('#b-timer').innerHTML = this.phase === 'deploy' ? '배치 단계' :
         `⏱ ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} / ${Math.floor(lim / 60)}:${String(lim % 60).padStart(2, '0')}<div class="power"><div style="width:${hp[0] / tot * 100}%"></div><div style="width:${hp[1] / tot * 100}%"></div></div>`;
       let hint = '';
-      if (this.phase === 'deploy') hint = ch ? '왼쪽 구역에 유닛을 배치하세요 · 우클릭으로 제거 · Space로 시작' : '좌클릭: 배치 · 우클릭: 제거 · 팀을 바꿔 양쪽에 배치하세요';
+      const touch = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+      if (this.phase === 'deploy') hint = touch
+        ? (ch ? '파란 구역을 탭/드래그해 배치 · 두 손가락으로 확대·이동' : '탭해서 배치 · 지우기 도구로 제거 · 두 손가락 확대')
+        : (ch ? '왼쪽 구역에 유닛을 배치하세요 · 우클릭으로 제거 · Space로 시작' : '좌클릭: 배치 · 우클릭: 제거 · 팀을 바꿔 양쪽에 배치하세요');
       $('#b-hint').textContent = hint; $('#b-hint').hidden = !hint;
     },
 
@@ -536,6 +573,18 @@
         if (this.b.over) this.finish();
         this._hudT = (this._hudT || 0) + dtReal;
         if (this._hudT > 0.2) { this._hudT = 0; this.updateHud(); if (this.infoInst) this.showInfo(this.infoInst.type, this.infoInst); }
+      }
+      if (this.portraitView) {
+        const c = this.canvas;
+        if (c.clientWidth > 0) {
+          this.portraitView = false;
+          if (c.clientHeight > c.clientWidth * 1.1) {
+            // 세로 화면: 배치 구역 위주로 확대
+            this.r.zoom = Math.min(2.2, SW.WORLD.W / 800);
+            this.r.camX = this.mode === 'challenge' ? 420 : SW.WORLD.W / 2;
+            this.r.camY = SW.WORLD.H / 2;
+          }
+        }
       }
       const ui = { hover: this.hover };
       if (this.phase === 'deploy') {
@@ -576,7 +625,16 @@
             const root = SW.SKILL_TREES[f][0];
             if (root.stage && root.stage === save.clearedCount() && first) rows += `<div style="color:var(--accent)">🔓 ${SW.FAMILIES[f].title} 스킬 트리 개방!</div>`;
           }
-        } else if (b.timeout) rows += '<div style="color:#ff8a8a">시간 초과!</div>';
+        } else {
+          if (b.timeout) rows += '<div style="color:#ff8a8a">시간 초과!</div>';
+          // 패배 보상: 격파한 적 비율만큼 (최대 40%)
+          const left = b.units.filter(u => u.team === 1 && !u.def.summonOnly).reduce((t, u) => t + Math.max(0, u.hp), 0);
+          const frac = Math.max(0, Math.min(1, 1 - left / (this.enemyHp0 || 1)));
+          const g = Math.round(s.reward * 0.4 * frac * (1 + this.mods.goldBonus));
+          if (g > 0) { save.data.gold += g; save.write(); updateGold(); }
+          rows += `<div>적 격파율 <b>${Math.round(frac * 100)}%</b></div><div>패배 보상 <b>💰 ${fmt(g)}</b></div>`;
+          rows += '<div class="muted" style="font-size:12px;margin-top:6px">💡 스킬 트리를 강화하거나 다른 조합을 시도해 보세요</div>';
+        }
         title = win ? '<h2 class="win">승리!</h2>' : '<h2 class="lose">패배</h2>';
       } else {
         title = b.winner === 0 ? '<h2 class="win" style="color:#8cb4ff">파란 팀 승리</h2>' : b.winner === 1 ? '<h2 class="lose">빨간 팀 승리</h2>' : '<h2>무승부</h2>';
