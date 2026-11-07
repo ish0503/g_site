@@ -100,7 +100,7 @@
         const s = this.scoreTarget(u, e, R, dd);
         if (e === u.target) cur = s;
         if (s > bs) { bs = s; best = e; }
-        if (++n > 60) return true;      // 대규모 전투: 후보 수 제한
+        if (++n > (this.units.length > 1500 ? 28 : 60)) return true;      // 대규모 전투: 후보 수 제한
       };
       this.enemyQuery(u, R, evalE);
       if (!best) {
@@ -154,7 +154,15 @@
       const isHealer = d.attack === 'heal';
       // 타깃
       if (isHealer) this.setTarget(u, this.findHealTarget(u));
-      else this.setTarget(u, this.chooseTarget(u));
+      else {
+        // 교전 고정(3.1): 사거리 안의 유효한 타깃과 싸우는 중이면 전체 재평가를 최대 3회 건너뛴다
+        const t = u.target;
+        if (t && u.lockN > 0 && u.tauntT <= 0 && !u.ai.cmd && t.alive && this.targetable(u, t)) {
+          const dx = t.x - u.x, dy = t.y - u.y, rr = this.reach(u, t) + 8;
+          if (dx * dx + dy * dy <= rr * rr) { u.lockN--; }
+          else { u.lockN = 0; this.setTarget(u, this.chooseTarget(u)); }
+        } else { this.setTarget(u, this.chooseTarget(u)); u.lockN = 3; }
+      }
       // 기술 사용
       if (d.ability && u.skillCd <= 0) this.trySkill(u);
       if (!u.alive) return;
@@ -211,7 +219,7 @@
       const face = (x, y) => { u.facing = Math.atan2(y - u.y, x - u.x); };
       const toward = (x, y, stopAt = 0) => {
         const dx = x - u.x, dy = y - u.y, dd = Math.sqrt(dx * dx + dy * dy);
-        if (dd > stopAt && dd > 0.5) { mx = dx / dd; my = dy / dd; }
+        if (dd > stopAt && dd > 0.5) { mx = dx / dd; my = dy / dd; const wp = this.nav ? this.navDir(u, x, y) : null; if (wp) { const wx = wp.x - u.x, wy = wp.y - u.y, wl = Math.sqrt(wx * wx + wy * wy) || 1; mx = wx / wl; my = wy / wl; } }
         return dd;
       };
       if (!d.immobile) {
@@ -289,6 +297,7 @@
               mx = ex / el; my = ey / el; ai.state = 'retreat';
             } else if (dd > reach * 0.92) {
               mx = nx; my = ny;
+              const wp = this.nav ? this.navDir(u, t.x, t.y) : null; if (wp) { const wx = wp.x - u.x, wy = wp.y - u.y, wl = Math.sqrt(wx * wx + wy * wy) || 1; mx = wx / wl; my = wy / wl; }   // (3.1) 경로 탐색
               ai.state = (t.hp < t.maxHp * 0.3 && (t.vx * nx + t.vy * ny) > 10) ? 'pursuit' : 'approach';
               if (ai.state === 'pursuit') speed *= 1.1;
               if (d.charge) {

@@ -65,6 +65,8 @@
     if (this.state !== 'PREPARING') return;
     orig.call(this);
     this.hadCommander = [0, 1].map(t => this.units.some(u => u.team === t && u.commander));
+    this.hasStructures = this.units.some(u => u.def.structure);
+    this.navBlock = !!(this.terrain && this.terrain.t.some(v => SW.TERRAIN_TYPES[v].block));
     if (this.weatherId !== 'clear' || this.timeId !== 'day') this.banner(`${this.weather.icon} ${this.weather.name} · ${this.timeOfDay.icon} ${this.timeOfDay.name}`, '#cfe0ff', 2, this.weather.desc);
     this.hooks.push((b, dt) => b.worldTick(dt));
   });
@@ -122,10 +124,12 @@
     if (u.exposeT > 0) u.exposeT -= dt;
     if (d.regenSelf && u.hp < u.maxHp) this.heal(u, d.regenSelf * dt, null, true);
     // 지형: 화재·용암
-    if (this.terrain && !d.flying && !d.structure) {
+    if (this.terrain && !d.flying && !d.structure && (u.tT = (u.tT || 0) - dt) <= 0) {
+      u.tT = 0.25;                                       // (3.1) 지형 위험은 0.25초 간격으로 판정
       const tt = this.terrain.at(u.x, u.y);
-      if (tt.burn && !(d.resist && d.resist.fire >= 1)) { this.damage(null, u, tt.burn * dt, 'true', { dot: true, srcTeam: -1, element: 'fire' }); if (!u.alive) return false; }
-      if (this.weather.extinguish && u.burn > 0) u.burn -= dt;   // 비: 화상 빨리 꺼짐
+      u.tSpd = tt.speed || 1;
+      if (tt.burn && !(d.resist && d.resist.fire >= 1)) { this.damage(null, u, tt.burn * 0.25, 'true', { dot: true, srcTeam: -1, element: 'fire' }); if (!u.alive) return false; }
+      if (this.weather.extinguish && u.burn > 0) u.burn -= 0.25;   // 비: 화상 빨리 꺼짐
     }
     if (!orig.call(this, u, dt)) return false;
     // 사기 (0.5초 간격)
@@ -188,9 +192,12 @@
   });
 
   // 타깃 가능 여부: 시야(안개·야간) · 숲 은폐
-  wrap('targetable', function (orig, u, e) {
-    if (!orig.call(this, u, e)) return false;
-    if (e.exposeT > 0 || e.def.structure || e.def.boss) return true;
+  // (3.1) 가장 자주 호출되는 함수라 래퍼 없이 2.0 판정과 합쳐서 직접 정의
+  P.targetable = function (u, e) {
+    if (!e.alive || e.team === u.team || e.stealthed) return false;
+    const ed = e.def;
+    if (ed.untargetable || (ed.flying && !u.def.canHitAir)) return false;
+    if (e.exposeT > 0 || ed.structure || ed.boss) return true;
     const per = this.perception;
     if (per || (this.terrain && !e.def.flying)) {
       const d2 = dist2(u, e);
@@ -198,7 +205,7 @@
       if (this.terrain && d2 > 170 * 170 && !e.def.flying && this.terrain.at(e.x, e.y).conceal) return false;
     }
     return true;
-  });
+  };
   wrap('scoreTarget', function (orig, u, e, R, dd) {
     let s = orig.call(this, u, e, R, dd);
     if (e.def.structure) s = s < 0 ? s : s * ((u.def.vsStructure > 1 || u.def.role === 'siege' || u.breachT > 0) ? 1.4 : 0.3);
@@ -238,21 +245,23 @@
     }
     // 이동량에 지형·날씨·부상·감전 보정 적용
     let k = 1;
-    if (!d.flying && this.terrain) k *= this.terrain.at(ox, oy).speed || 1;
+    if (!d.flying && this.terrain) k *= u.tSpd || 1;               // (3.1) 0.25초마다 갱신되는 지형 속도 캐시
     if (d.flying && this.weather.fly) k *= this.weather.fly;
     if (this.weather.speed) k *= this.weather.speed;
     if (this.moraleOn && u.hp < u.maxHp * 0.35) k *= 0.85;      // 부상
     if (u.shockT > 0) k *= 0.7;
     if (k !== 1) { u.x = ox + (u.x - ox) * k; u.y = oy + (u.y - oy) * k; }
     // 통행 불가 지형: 축 단위로 미끄러짐
-    if (this.terrain && !d.flying && this.terrain.blocked(u.x, u.y)) {
+    if (this.navBlock && !d.flying && this.terrain.blocked(u.x, u.y)) {
       if (!this.terrain.blocked(u.x, oy)) u.y = oy;
       else if (!this.terrain.blocked(ox, u.y)) u.x = ox;
       else { u.x = ox; u.y = oy; }
     }
     // 막힘 감지 (성벽 돌파 판단용)
-    const want = u.vx * u.vx + u.vy * u.vy, moved = (u.x - ox) ** 2 + (u.y - oy) ** 2;
-    if (want > 200 && moved < want * dt * dt * 0.08) u.stuckT += dt; else u.stuckT = Math.max(0, u.stuckT - dt * 2);
+    if (this.navBlock || this.hasStructures) {
+      const want = u.vx * u.vx + u.vy * u.vy, moved = (u.x - ox) ** 2 + (u.y - oy) ** 2;
+      if (want > 200 && moved < want * dt * dt * 0.08) u.stuckT += dt; else u.stuckT = Math.max(0, u.stuckT - dt * 2);
+    }
     if (u.breachT > 0) u.breachT -= dt;
   });
 

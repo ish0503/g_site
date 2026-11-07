@@ -137,7 +137,7 @@
     goBattle({
       title: `🗺 ${sc.name}`, sub: `${sc.desc} · 승리: 적 지휘관 격파 / 거점 점수 100 / 적 전멸`, W, H, terrain: terrain.serialize(), weather: sc.weather, time: sc.time,
       units: clean, squads, palette: 'none', lockMsg: '전쟁 모드: 편성 화면에서 군대를 구성합니다. ✥이동 도구로 유닛을, 부대 패널로 명령을 내리세요.',
-      zone: zoneL(W), morale: true, command: true, frontline: true, ai: [null, EA.pers], victory: { type: 'war', scoreWin: 100 },
+      zone: zoneL(W), morale: true, command: true, frontline: true, supply: true, ai: [null, EA.pers], victory: { type: 'war', scoreWin: 100 },
       points: sc.points.map(([x, y], i) => ({ x: x * W, y: y * H, r: 110, name: ['북부 거점', '중앙 거점', '남부 거점'][sc.points.length === 1 ? 1 : sc.points.length === 2 ? i * 2 : i] })),
       mods: [War.growth ? save.mods() : null, null], timeLimit: 900, xp: War.growth,
       onFinish(b, win) {
@@ -277,7 +277,7 @@
       addArmy(units, squads, A0, 0); addArmy(units, squads, A1, 1, '적 ');
       goBattle({
         title: `🤖 ${SW.AI_PERSONALITIES[pa].name} vs ${SW.AI_PERSONALITIES[pb].name}`, sub: '자율 AI 전쟁 — 관전 모드', W, H, terrain: terrain.serialize(), weather: AV.weather, time: AV.time,
-        units: units.filter(u => !terrain.blocked(u.x, u.y)), squads, palette: 'none', spectate: true, morale: true, frontline: true, ai: [pa, pb], victory: { type: 'war', scoreWin: 100 },
+        units: units.filter(u => !terrain.blocked(u.x, u.y)), squads, palette: 'none', spectate: true, morale: true, frontline: true, supply: true, ai: [pa, pb], victory: { type: 'war', scoreWin: 100 },
         points: [{ x: W / 2, y: H / 2, r: 110, name: '중앙 거점' }], timeLimit: 900, restoreDeploy: false,
         onFinish(b) { SW.recordLearn(pa, b.winner === 0, pb); SW.recordLearn(pb, b.winner === 1, pa); save.write(); return { title: `<h2>${b.winner === 0 ? '🔵 ' + SW.AI_PERSONALITIES[pa].name : b.winner === 1 ? '🔴 ' + SW.AI_PERSONALITIES[pb].name : '무승부'} 승리</h2>`, rows: '<div class="muted">결과가 AI 학습 기록에 반영되었습니다</div>', buttons: [{ text: 'AI 대전 설정', fn: () => go('aivsai') }] }; },
       });
@@ -417,7 +417,7 @@
       title: `👑 ${defense ? '방어전' : '정복전'}: ${r.name}`, sub: `${sc.enemyFaction === 'neutral' ? '중립 세력' : SW.FACTIONS[sc.enemyFaction].name} · ${SW.WEATHER[sc.weather].icon}${SW.WEATHER[sc.weather].name} · ${SW.TIMES[sc.time].name}${sc.moraleBonus ? ' · ⚠ 식량 부족 (사기 -25)' : ''}${sc.allies.length ? ' · 동맹 지원군 참전' : ''}`,
       W, H, terrain: terrain.serialize(), weather: sc.weather, time: sc.time, units: units.filter(u => !terrain.blocked(u.x, u.y) || SW.UNITS[u.type].structure), squads,
       pop: pop + save.mods().popBonus, palette: 'unlocked', zone: def === 0 ? { x0: 20, x1: W * 0.4 } : zoneL(W), morale: true, command: true, frontline: units.length > 120,
-      moraleBonus: [sc.moraleBonus, 0], ai: [null, EA.pers], victory, timeLimit: def >= 0 ? 360 : 600, xp: true, key: 'campaign',
+      moraleBonus: [sc.moraleBonus, 0], ai: [null, EA.pers], victory, supply: !sc.boss, supplyOpts: { start0: sc.moraleBonus ? 50 : 100 }, timeLimit: def >= 0 ? 360 : 600, xp: true, key: 'campaign',
       setup: traps ? (b) => SW.setupTraps(b, traps, def) : null,
       onFinish(b, win) {
         const left = b.units.filter(u => u.team === 1).length, tot = EA.units.length || 1;

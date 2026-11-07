@@ -105,9 +105,11 @@ window.SW = window.SW || {};
 
   P.gotoMove = function (u, dt) {
     const d = u.def, g = u.ai.dest; if (!g) return;
-    const dx = g.x - u.x, dy = g.y - u.y, dd = Math.hypot(dx, dy);
+    const dx = g.x - u.x, dy = g.y - u.y, d2 = dx * dx + dy * dy;
+    if (d2 < 16 && u.vx * u.vx + u.vy * u.vy < 4 && !u.kx && !u.ky) { u.vx = u.vy = 0; return; }   // (3.1) 제자리 대기
+    const dd = Math.sqrt(d2);
     let mx = 0, my = 0;
-    if (dd > 6) { mx = dx / dd; my = dy / dd; u.facing = Math.atan2(dy, dx); }
+    if (dd > 6) { mx = dx / dd; my = dy / dd; u.facing = Math.atan2(dy, dx); const wp = this.nav ? this.navDir(u, g.x, g.y) : null; if (wp) { const wx = wp.x - u.x, wy = wp.y - u.y, wl = Math.sqrt(wx * wx + wy * wy) || 1; mx = wx / wl; my = wy / wl; } }
     const fm = this.fm(u.team);
     const speed = d.speed * Math.max(0.1, 1 - Math.max(u.slowAmt, u.buff.slow)) * Math.max(0.1, 1 + u.buff.speed + (fm.speed || 0)) * (dd < 30 ? dd / 30 : 1);
     const k = Math.min(1, clamp(14 * 12 / u.r, 4, 20) * dt);

@@ -22,9 +22,9 @@ window.SW = window.SW || {};
     const groups = [];
     let left = budget, guard = 0;
     while (left > 0 && guard++ < 40) {
-      const type = pool[(Math.random() * pool.length) | 0], d = SW.UNITS[type];
+      const type = pool[(SW.util.rand() * pool.length) | 0], d = SW.UNITS[type];
       if (d.pop > left) { if (left < 2) break; continue; }
-      const cnt = Math.max(1, Math.min(Math.floor(left / d.pop), Math.ceil(10 / d.pop) + ((Math.random() * 4) | 0)));
+      const cnt = Math.max(1, Math.min(Math.floor(left / d.pop), Math.ceil(10 / d.pop) + ((SW.util.rand() * 4) | 0)));
       groups.push([type, cnt]); left -= cnt * d.pop;
     }
     // 5 웨이브마다 보스급 정예
@@ -46,17 +46,17 @@ window.SW = window.SW || {};
         // 무한 전쟁: 웨이브마다 아군 증원
         if (opts.reinforce && S.wave > 1 && opts.pool && opts.pool.length) {
           let left = opts.reinforce;
-          while (left > 0) { const t = opts.pool[(Math.random() * opts.pool.length) | 0], d = SW.UNITS[t]; if (d.pop > left) break; bb.spawn(t, 0, 40 + Math.random() * 60, 80 + Math.random() * (bb.H - 160)); left -= d.pop; }
+          while (left > 0) { const t = opts.pool[(SW.util.rand() * opts.pool.length) | 0], d = SW.UNITS[t]; if (d.pop > left) break; bb.spawn(t, 0, 40 + SW.util.rand() * 60, 80 + SW.util.rand() * (bb.H - 160)); left -= d.pop; }
           bb.banner('증원 도착', '#8cb4ff', 1.2);
         }
         bb.buffs[1] = w.buff; bb.defCache[1] = {};
         for (const [type, cnt] of w.groups) {
           const d = SW.UNITS[type], ranged = d.range > 40 || d.support;
-          const cx = bb.W - (ranged ? 60 : 130) - Math.random() * 40, cy = 80 + Math.random() * (bb.H - 160);
+          const cx = bb.W - (ranged ? 60 : 130) - SW.util.rand() * 40, cy = 80 + SW.util.rand() * (bb.H - 160);
           const cols = Math.max(1, Math.ceil(Math.sqrt(cnt) / 1.5)), g = d.size * 2 + 6;
           for (let i = 0; i < cnt; i++) {
             const u = bb.spawn(type, 1, Math.min(bb.W - d.size, cx + (i % cols) * g), Math.max(d.size, Math.min(bb.H - d.size, cy + (Math.floor(i / cols) - cnt / cols / 2) * g)));
-            u.ai.think = Math.random() * 0.3;
+            u.ai.think = SW.util.rand() * 0.3;
           }
           S.spawned += cnt;
         }

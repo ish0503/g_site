@@ -6,10 +6,19 @@
 window.SW = window.SW || {};
 
 (() => {
-  const rand = Math.random;
+  // 결정론적 난수: 전투마다 시드를 가진 생성기(mulberry32). 같은 시드 = 같은 전투.
+  SW.makeRng = (seed) => {
+    let a = (seed >>> 0) || 1;
+    return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  };
+  let curRng = Math.random;
+  const rand = () => curRng();
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
   const dist2 = (a, b) => { const dx = a.x - b.x, dy = a.y - b.y; return dx * dx + dy * dy; };
-  SW.util = { rand, clamp, dist2 };
+  SW.util = { rand, clamp, dist2, setRng: (f) => { const p = curRng; curRng = f || Math.random; return p; } };
+  // fn 실행 동안 전투의 난수 생성기를 사용
+  const withRng = (b, fn) => { const prev = curRng; curRng = b._rng; try { return fn(); } finally { curRng = prev; } };
+  SW.withRng = withRng;
 
   const deepMerge = (a, b) => {
     for (const [k, v] of Object.entries(b)) {
@@ -70,6 +79,8 @@ window.SW = window.SW || {};
       this.cellCount = [new Map(), new Map()];
       this.visual = opts.visual !== false;
       this.quality = opts.quality || 'high';
+      this.seed = opts.seed !== undefined ? opts.seed >>> 0 : (Math.random() * 4294967296) >>> 0;
+      this._rng = SW.makeRng(this.seed);
       this.stats = [this.newTeamStats(), this.newTeamStats()];
       this.rec = [{}, {}];                      // 유닛 종류별 통계
       this.best = { life: null };
@@ -84,7 +95,8 @@ window.SW = window.SW || {};
     }
     fm(team) { return SW.FORMATIONS[this.formation[team]].mods; }
 
-    spawn(type, team, x, y, extra) {
+    spawn(type, team, x, y, extra) { return withRng(this, () => this._spawn(type, team, x, y, extra)); }
+    _spawn(type, team, x, y, extra) {
       const d = this.def(type, team);
       const u = {
         uid: UID++, type, def: d, team, x, y, vx: 0, vy: 0, kx: 0, ky: 0,
@@ -184,7 +196,8 @@ window.SW = window.SW || {};
     }
 
     // ── 메인 스텝 (고정 시간 간격) ──
-    step(dt) {
+    step(dt) { const prev = curRng; curRng = this._rng; try { this._step(dt); } finally { curRng = prev; } }
+    _step(dt) {
       if (this.state === 'PREPARING') this.start();
       if (this.state !== 'RUNNING' || this.over) return;
       this.time += dt;
@@ -192,9 +205,15 @@ window.SW = window.SW || {};
       this.applyBuffs(dt);                    // 7. Status (버프·오라)
       this.updateFormations(dt);              // 4. Formation
       const big = this.units.length > 700;
+      // (3.1) 업데이트 LOD: 대규모 전투에서 적과 멀리 떨어진 유닛은 격프레임으로 2배 시간 간격 갱신
+      const lod = this.units.length > 900, par = (this.frame || 0) & 1;
       for (let i = 0; i < this.units.length; i++) {
         const u = this.units[i];
-        if (u.alive) this.updateUnit(u, dt, big);   // 2·3·5·6 Targeting / Movement / Combat / Skill
+        if (!u.alive) continue;
+        if (lod && u.nearD > 600 && !u.def.boss && u.ai.action !== 'flee') {
+          if ((u.uid & 1) !== par) continue;
+          this.updateUnit(u, dt * 2, big);
+        } else this.updateUnit(u, dt, big);   // 2·3·5·6 Targeting / Movement / Combat / Skill
       }
       this.updateProjectiles(dt);
       this.updateAreas(dt);
@@ -240,7 +259,9 @@ window.SW = window.SW || {};
     applyBuffs(dt) {
       for (const u of this.units) {
         const b = u.buff;
+        if (!u.bd && !u.timed.length) continue;          // (3.1) 버프가 없던 유닛은 초기화 생략
         b.atkSpd = b.dmg = b.armor = b.slow = b.atkSlow = b.speed = b.regen = b.crit = b.block = b.reflect = b.dodge = b.lifesteal = b.projTaken = b.covered = 0;
+        u.bd = u.timed.length > 0;
         if (u.timed.length) {
           for (let i = u.timed.length - 1; i >= 0; i--) {
             const t = u.timed[i]; t.t -= dt;
@@ -270,7 +291,7 @@ window.SW = window.SW || {};
       }
       for (const u of this.units) {
         const ab = u.ab; if (!ab) continue;
-        const b = u.buff;
+        const b = u.buff; u.bd = true;
         for (const k in ab) if (ab[k] > b[k]) b[k] = ab[k];
       }
     }

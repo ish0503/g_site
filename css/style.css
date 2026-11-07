@@ -397,3 +397,7 @@ button { font: inherit; color: inherit; }
 .cmd-panel.collapsed .cmd-row:not(:first-child) { display: none; }
 .cmd-panel.collapsed .cmd-row:first-child .chip:not(.tog):not(.on) { display: none; }
 .chip.tog { font-weight: 700; }
+
+body.replaying #b-start, body.replaying #b-pause, body.replaying #b-reset, body.replaying #b-clear, body.replaying .palette, body.replaying #b-pop, body.replaying #b-hint { display: none !important; }
+.supply { display: flex; gap: 6px; align-items: center; justify-content: center; font-size: 11px; margin-top: 3px; }
+.supply .sb { width: 70px; height: 5px; background: #222; border-radius: 3px; overflow: hidden; } .supply .sb div { height: 100%; }

@@ -250,17 +250,26 @@
 
     // ── 리플레이 ──
     startReplay(R) {
-      B.replayView = new SW.ReplayView(R); B.replaySel = undefined;
+      B.replayView = new SW.ReplayView(R); B.replaySel = undefined; document.body.classList.add('replaying');
       $('#b-result').hidden = true; this.panel.hidden = true; this.rbar.hidden = false;
       const evMarks = (R.events || []).filter(e => e.kind !== 'order' && e.kind !== 'ai').slice(0, 60).map(e => `<i style="left:${e.t / R.end * 100}%" title="${Math.floor(e.t)}s ${e.text}"></i>`).join('');
       this.rbar.innerHTML = `<button data-r="play">⏸</button><div class="rb-track"><input type="range" min="0" max="${R.end}" step="0.05" value="0"><div class="rb-ev">${evMarks}</div></div><span class="rb-t">0:00</span>
-        <select data-r="spd"><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option></select><button data-r="exit">✕ 종료</button>`;
+        <select data-r="spd"><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option></select><button data-r="save" title="브라우저 보관함에 저장">💾</button><button data-r="dl" title="파일로 내려받기 (공유용)">⬇</button><button data-r="exit">✕ 종료</button>`;
       const v = B.replayView, rng = this.rbar.querySelector('input');
       this.rbar.querySelector('[data-r=play]').onclick = (e) => { if (v.time >= v.duration) v.seek(0); v.playing = !v.playing; e.target.textContent = v.playing ? '⏸' : '▶'; };
       this.rbar.querySelector('[data-r=spd]').onchange = (e) => { v.speed = +e.target.value; };
       rng.oninput = () => { v.seek(+rng.value); };
-      this.rbar.querySelector('[data-r=exit]').onclick = () => { B.replayView = null; this.rbar.hidden = true; $('#b-result').hidden = false; this.renderPanel(true); };
+      this.rbar.querySelector('[data-r=exit]').onclick = () => { B.replayView = null; this.rbar.hidden = true; document.body.classList.remove('replaying'); if (this.replayBack) { const bk = this.replayBack; this.replayBack = null; SW.ui.go(bk); return; } $('#b-result').hidden = false; this.renderPanel(true); };
+      this.rbar.querySelector('[data-r=save]').onclick = async () => { try { await SW.Replay.save(R, $('#b-name').textContent || '전투'); toast('📼 리플레이 보관함에 저장했습니다'); } catch (e) { toast('저장할 수 없습니다 (브라우저 저장소 사용 불가)'); } };
+      this.rbar.querySelector('[data-r=dl]').onclick = async () => { const blob = await SW.Replay.pack(R); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `도형전쟁_리플레이_${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.gwrep`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
       toast('🎬 리플레이: 유닛을 클릭하면 이동 경로가 표시됩니다');
+    },
+    // 보관함·파일에서 단독으로 리플레이 열기
+    openReplay(R, back = 'replays') {
+      B.open('scenario', { title: '🎬 리플레이', sub: `${Math.round(R.end || 0)}초 · 유닛 ${R.meta.length} · ${new Date(R.created || Date.now()).toLocaleString()}`, W: R.W, H: R.H, units: [], allowEmptyEnemy: true, palette: 'none', restoreDeploy: false });
+      SW.ui.go('battle');
+      this.replayBack = back;
+      this.startReplay(R);
     },
     updateReplayBar() {
       const v = B.replayView; if (!v || this.rbar.hidden) return;
@@ -281,6 +290,7 @@
         <label>시간 <select data-k="time">${opt(SW.TIMES, R.time)}</select></label>
         <label>승리 조건 <select data-k="victory"><option value="annihilate">전멸</option><option value="commander" ${R.victory === 'commander' ? 'selected' : ''}>지휘관 격파</option><option value="war" ${R.victory === 'war' ? 'selected' : ''}>지휘관·거점 점수</option></select></label>
         <label class="chk"><input type="checkbox" data-k="morale" ${R.morale ? 'checked' : ''}> 사기·패주·포위 규칙</label>
+        <label class="chk"><input type="checkbox" data-k="supply" ${R.supply ? 'checked' : ''}> 보급 규칙 (보급 기지·보급선)</label>
         <label>파란 팀 능력치 <input type="number" data-k="mul0" min="25" max="400" step="25" value="${R.statMul ? Math.round(R.statMul[0].hp * 100) : 100}">%</label>
         <label>빨간 팀 능력치 <input type="number" data-k="mul1" min="25" max="400" step="25" value="${R.statMul ? Math.round(R.statMul[1].hp * 100) : 100}">%</label>
         <div class="row"><button class="btn small" data-a="point">＋거점</button><button class="btn small" data-a="clearpts">거점 삭제</button></div>
@@ -293,6 +303,7 @@
       set('time', (x) => { R.time = x.value; B.rebuild(); });
       set('victory', (x) => { R.victory = x.value; B.rebuild(); });
       set('morale', (x) => { R.morale = x.checked; B.rebuild(); });
+      set('supply', (x) => { R.supply = x.checked; B.rebuild(); });
       const mul = () => { const a = +D.querySelector('[data-k=mul0]').value / 100, c = +D.querySelector('[data-k=mul1]').value / 100; R.statMul = a === 1 && c === 1 ? null : [{ hp: a, dmg: a }, { hp: c, dmg: c }]; B.rebuild(); };
       set('mul0', mul); set('mul1', mul);
       set('load', (x) => { if (x.value) this.loadScenario(save.data.scenarios[x.value]); });

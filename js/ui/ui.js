@@ -472,6 +472,7 @@
       if (this.squadDefs && this.squadDefs.length) { this.b.initSquads(); for (const q of this.squadDefs) this.b.addSquad(q.team, q.name, q.order || 'free'); }
       for (const u of this.snapshot) this.b.spawn(u.type, u.team, u.x, u.y, u.sq !== undefined || u.vip ? { sq: u.sq, vip: u.vip, fixed: u.fixed } : undefined);
       if (this.sc && this.sc.setup) this.sc.setup(this.b);
+      if ((this.sc && this.sc.supply) || (this.mode === 'sandbox' && this.rules && this.rules.supply)) this.b.enableSupply(this.sc ? this.sc.supplyOpts || {} : {});
       this.phase = 'deploy'; this.acc = 0; this.selected = null;
       $('#b-result').hidden = true;
       this.updateHud();
@@ -802,7 +803,8 @@
       if (this.phase === 'deploy') timer = `배치 단계 · ${SW.FORMATIONS[this.forms[0]].icon} ${SW.FORMATIONS[this.forms[0]].name}${this.player ? '' : ` vs ${SW.FORMATIONS[this.forms[1]].icon} ${SW.FORMATIONS[this.forms[1]].name}`}`;
       else if (this.mode === 'survival') timer = `🌊 웨이브 ${this.b.survival ? this.b.survival.wave : 0} · ⏱ ${ft(t)} · 다음 웨이브 ${Math.max(0, Math.ceil(this.b.survival?.timer || 0))}초`;
       else timer = `⏱ ${ft(t)} / ${ft(lim)} · ${this.speed}×`;
-      $('#b-timer').innerHTML = `${timer}${this.phase !== 'deploy' || cnt[1] ? `<div class="power" title="전투력"><div style="width:${pw[0] / tot * 100}%"></div><div style="width:${pw[1] / tot * 100}%"></div></div>` : ''}`;
+      const sup = this.b.supplyOn ? `<div class="supply">🌾 <span class="sb" title="아군 보급"><div style="width:${this.b.supply[0]}%;background:${this.b.supply[0] < 30 ? '#ff7070' : '#ffcf4d'}"></div></span>${Math.round(this.b.supply[0])}% · 적 ${Math.round(this.b.supply[1])}%<span class="sb"><div style="width:${this.b.supply[1]}%;background:#c08a8a"></div></span></div>` : '';
+      $('#b-timer').innerHTML = `${timer}${sup}${this.phase !== 'deploy' || cnt[1] ? `<div class="power" title="전투력"><div style="width:${pw[0] / tot * 100}%"></div><div style="width:${pw[1] / tot * 100}%"></div></div>` : ''}`;
       let hint = '';
       const touch = isCoarse();
       if (this.phase === 'deploy') hint = touch
