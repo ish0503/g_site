@@ -82,6 +82,7 @@
       p.innerHTML = `<h3>🌊 ${z.name}</h3><div class="small muted">인접 해역 ${z.nb.length} · 해안 지역 ${z.coast.length}</div>` + (UI.seaExtra ? UI.seaExtra(UI.selSea) : '');
       return;
     }
+    if (UI.sel == null || !M.regions[UI.sel]) UI.sel = -1;
     if (UI.sel < 0) { p.innerHTML = '<p class="muted">지도에서 지역을 누르면 정보가 나옵니다. 끌어서 이동, 휠·핀치로 확대합니다.</p>' + (UI.regionEmpty ? UI.regionEmpty() : ''); return; }
     const r = M.regions[UI.sel], s = w.state.regions[UI.sel], T = W4.TERRAIN[r.terrain];
     const prod = W4.regionProd ? W4.regionProd(w, r.id) : r.prod;

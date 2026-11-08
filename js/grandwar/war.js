@@ -156,7 +156,7 @@
     w.wars.splice(w.wars.indexOf(war), 1);
     for (const id of [...war.att, ...war.def]) { w.nations[id].atWar = War.inWar(w, id); if (W4.Army) W4.Army.sendHome(w, id); }
     w.event(terms.white ? `🕊 ${war.name} 종전 — 백지 평화` : `🕊 ${war.name} 종전: ${w.def(lead).name} 측 승리 — ${text}`, 'peace', lead, { other: loserLead, war: war.id, terms });
-    (w.warHistory = w.warHistory || []).push({ id: war.id, name: war.name, att: war.att.slice(), def: war.def.slice(), start: war.start, end: w.turn, winner: terms.white ? null : lead, score: war.score, terms: text, battles: war.battles.length });
+    (w.warHistory = w.warHistory || []).push({ id: war.id, name: war.name, att: war.att.slice(), def: war.def.slice(), start: war.start, end: w.turn, winner: terms.white ? null : lead, score: war.score, terms: text, battles: war.battles.length, contrib: war.contrib || {} });
     checkDeaths(w);
   }
   War.applyPeace = applyPeace;

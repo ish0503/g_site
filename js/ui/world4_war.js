@@ -176,7 +176,7 @@
       return { title: won ? '<h2 class="win">전투 승리!</h2>' : '<h2 class="lose">전투 패배</h2>', rows: applied ? `<div>세계 반영: 아군 손실 ${(applied.att === w.player ? applied.attLost : applied.defLost).toFixed(1)}k · 적 손실 ${(applied.att === w.player ? applied.defLost : applied.attLost).toFixed(1)}k</div>` : '',
         buttons: [{ text: '🌍 세계로 돌아가기', cls: 'primary', fn: async () => {
           // 리플레이를 보관함에 저장하고 세계 전투 기록에 연결
-          try { if (b.replay && SW.Replay.save) { const rr = await SW.Replay.save(b.replay, `${w.dateStr()} ${w.map.regions[i].name} 전투`); if (applied) applied.replay = rr.id; } } catch (e) { /* 저장소 없음 */ }
+          try { if (b.replay && SW.Replay.save) { const rr = await SW.Replay.save(b.replay, `${w.dateStr()} ${w.map.regions[i].name} 전투`); if (applied) W4.Chronicle.linkReplay(w, applied, rr.id); } } catch (e) { /* 저장소 없음 */ }
           UI.open(w, { title, tab: 'wars', back: 'w4menu' }); cont(w);
         } }] };
     };
