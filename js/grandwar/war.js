@@ -169,6 +169,7 @@
         w.diplo.treaties = w.diplo.treaties.filter(t => t.a !== n.id && t.b !== n.id);
         for (const war of w.wars.slice()) { if (war.att.includes(n.id) || war.def.includes(n.id)) { war.att = war.att.filter(x => x !== n.id); war.def = war.def.filter(x => x !== n.id); if (war.lead.includes(n.id) || !war.att.length || !war.def.length) endWar(w, war); } }
         if (W4.Army) w.armies = w.armies.filter(a => a.owner !== n.id);
+        if (w.fleets) w.fleets = w.fleets.filter(f => f.owner !== n.id);
         w.event(`☠ ${n.name} 멸망`, 'war', n.id);
       }
     }

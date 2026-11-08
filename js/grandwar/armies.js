@@ -110,6 +110,7 @@
       up *= 1 - (M.upkeep || 0);
       N.spentNext.gold = (N.spentNext.gold || 0) + up; N.spentNext.food = (N.spentNext.food || 0) + food;
       if (N.res.gold < 0 || N.res.food <= 0) a.morale = Math.max(0.2, a.morale - 0.1);
+      if (a.onFleet) { if (a.train > 0) a.train--; continue; }      // 승선 중: 유지비만
       // 보급
       const s = w.state.regions[a.loc], ctrl = s.occ || s.owner;
       const home = ctrl === a.owner || D.has(w, 'alliance', a.owner, ctrl) || D.overlord(w, ctrl) === a.owner || D.overlord(w, a.owner) === ctrl || D.has(w, 'access', ctrl, a.owner);
@@ -130,7 +131,7 @@
   // ── 일 단위: 이동 → 교전 → 공성 ──
   function dayArmies(w) {
     for (const a of w.armies) {
-      if (a.mode !== 'move' || !a.path.length || a.train > 0) continue;
+      if (a.onFleet || a.mode !== 'move' || !a.path.length || a.train > 0) continue;
       const nxt = a.path[0];
       if (!A.canEnter(w, a.owner, nxt)) { a.path = []; a.mode = 'idle'; continue; }
       const slow = Math.min(...CLS.filter(k => a.u[k] > 0.05).map(k => W4.UNIT_CLASSES[k].speed));
@@ -166,7 +167,7 @@
     }
     // 공성: 적대 지역에 홀로 있는 군단
     for (const a of w.armies) {
-      if (a.mode === 'move' || a.train > 0) continue;
+      if (a.onFleet || a.mode === 'move' || a.train > 0) continue;
       const s = w.state.regions[a.loc], ctrl = s.occ || s.owner;
       if (ctrl === a.owner) continue;
       // 자국 영토가 점령당해 있으면 탈환, 아니면 적대 지역 공성

@@ -50,11 +50,11 @@
     return p;
   }
   function orders(w, id) {
-    const armies = A.list(w, id).filter(a => a.train <= 0);
+    const armies = A.list(w, id).filter(a => a.train <= 0 && !a.onFleet);
     if (!armies.length) return;
     // 같은 지역 군단 합치기
     for (const a of armies) for (const b of armies) if (a !== b && a.loc === b.loc && w.armies.includes(a) && w.armies.includes(b) && a.mode !== 'move' && b.mode !== 'move') W4.Act.merge(w, id, a.id, b.id);
-    const mine = A.list(w, id).filter(a => a.train <= 0);
+    const mine = A.list(w, id).filter(a => a.train <= 0 && !a.onFleet);
     const enemies = War.enemies(w, id);
     const cap = w.map.nations[id].capital;
     if (!enemies.length) {

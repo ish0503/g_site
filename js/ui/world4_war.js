@@ -70,7 +70,7 @@
     h += `<h4>모집 — ${w.map.regions[where].root} <small class="muted">(도시·병영 지역을 지도에서 선택)</small></h4><div class="btnrow">` + CLS.map(k => { const C = W4.UNIT_CLASSES[k]; return `<button class="btn small" data-rec="${k}" title="공격 ${C.atk} · 방어 ${C.def} · 유지 금 ${C.upkeep}/식량 ${C.food}">${C.icon}${C.name} ×1 <small>${Object.entries(C.cost).map(([r, v]) => W4.RES[r].icon + v).join('')} 👥${C.mp}</small></button>`; }).join('') + '</div>';
     h += `<div class="btnrow"><button class="btn small" data-rec5="inf">보병 ×5</button><button class="btn small" data-rec5="arc">궁병 ×5</button><button class="btn small" data-rec5="cav">기병 ×5</button></div>`;
     p.innerHTML = h;
-    p.querySelectorAll('[data-army]').forEach(x => x.onclick = () => { UI.armySel = +x.dataset.army; const a = w.armies.find(b => b.id === UI.armySel); if (a) { UI.sel = a.loc; UI.R.sel = a.loc; } UI.show('army'); });
+    p.querySelectorAll('[data-army]').forEach(x => x.onclick = () => { UI.armySel = +x.dataset.army; UI.fleetSel = null; const a = w.armies.find(b => b.id === UI.armySel); if (a) { UI.sel = a.loc; UI.R.sel = a.loc; } UI.show('army'); });
     p.querySelectorAll('[data-merge]').forEach(b => b.onclick = () => UI.act(W4.Act.merge(w, id, sel.id, +b.dataset.merge)));
     p.querySelectorAll('[data-stop]').forEach(b => b.onclick = () => { sel.path = []; sel.mode = 'idle'; UI.show('army'); });
     p.querySelectorAll('[data-disband]').forEach(b => b.onclick = () => { if (confirm('군단을 해산할까요? (인력 절반 회수)')) { UI.armySel = null; UI.act(W4.Act.disband(w, id, sel.id)); } });
