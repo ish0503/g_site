@@ -472,7 +472,7 @@
       if (this.squadDefs && this.squadDefs.length) { this.b.initSquads(); for (const q of this.squadDefs) this.b.addSquad(q.team, q.name, q.order || 'free'); }
       for (const u of this.snapshot) this.b.spawn(u.type, u.team, u.x, u.y, u.sq !== undefined || u.vip ? { sq: u.sq, vip: u.vip, fixed: u.fixed } : undefined);
       if (this.sc && this.sc.setup) this.sc.setup(this.b);
-      if ((this.sc && this.sc.supply) || (this.mode === 'sandbox' && this.rules && this.rules.supply)) this.b.enableSupply(this.sc ? this.sc.supplyOpts || {} : {});
+      if ((this.sc && this.sc.supply) || (this.mode === 'sandbox' && this.rules && this.rules.supply)) { this.b.enableSupply(this.sc ? this.sc.supplyOpts || {} : {}); this.b.enableAmmo(this.sc && this.sc.ammo ? this.sc.ammo : {}); }
       this.phase = 'deploy'; this.acc = 0; this.selected = null;
       $('#b-result').hidden = true;
       this.updateHud();
@@ -543,7 +543,10 @@
       if (this.b.state === 'PAUSED') this.b.resume(); else this.b.pause();
       this.updateHud();
     },
-    resetDeploy() { if (this.phase !== 'deploy') this.rebuild(); },
+    resetDeploy() {
+      if (this.sc && this.sc.noRetry && this.phase !== 'deploy') return;      // 세계 전투: 다시 싸우기 불가
+      if (this.phase !== 'deploy') this.rebuild();
+    },
     clearAll() {
       if (this.phase !== 'deploy') this.rebuild();
       if (this.player) this.b.units = this.b.units.filter(u => u.team === 1);
@@ -795,7 +798,7 @@
       $('#b-start').hidden = this.phase !== 'deploy';
       $('#b-pause').hidden = !fighting;
       $('#b-pause').textContent = this.b.state === 'PAUSED' ? '▶ 계속' : '⏸ 일시정지';
-      $('#b-reset').disabled = this.phase === 'deploy';
+      $('#b-reset').disabled = this.phase === 'deploy' || !!(this.sc && this.sc.noRetry);
       const t = this.b.time, lim = this.b.timeLimit;
       const pw = [this.power(0), this.power(1)], tot = pw[0] + pw[1] || 1;
       const ft = (x) => `${Math.floor(x / 60)}:${String(Math.floor(x % 60)).padStart(2, '0')}`;
@@ -803,7 +806,7 @@
       if (this.phase === 'deploy') timer = `배치 단계 · ${SW.FORMATIONS[this.forms[0]].icon} ${SW.FORMATIONS[this.forms[0]].name}${this.player ? '' : ` vs ${SW.FORMATIONS[this.forms[1]].icon} ${SW.FORMATIONS[this.forms[1]].name}`}`;
       else if (this.mode === 'survival') timer = `🌊 웨이브 ${this.b.survival ? this.b.survival.wave : 0} · ⏱ ${ft(t)} · 다음 웨이브 ${Math.max(0, Math.ceil(this.b.survival?.timer || 0))}초`;
       else timer = `⏱ ${ft(t)} / ${ft(lim)} · ${this.speed}×`;
-      const sup = this.b.supplyOn ? `<div class="supply">🌾 <span class="sb" title="아군 보급"><div style="width:${this.b.supply[0]}%;background:${this.b.supply[0] < 30 ? '#ff7070' : '#ffcf4d'}"></div></span>${Math.round(this.b.supply[0])}% · 적 ${Math.round(this.b.supply[1])}%<span class="sb"><div style="width:${this.b.supply[1]}%;background:#c08a8a"></div></span></div>` : '';
+      const sup = this.b.supplyOn ? `<div class="supply">🌾 <span class="sb" title="아군 보급"><div style="width:${this.b.supply[0]}%;background:${this.b.supply[0] < 30 ? '#ff7070' : '#ffcf4d'}"></div></span>${Math.round(this.b.supply[0])}% · 적 ${Math.round(this.b.supply[1])}%<span class="sb"><div style="width:${this.b.supply[1]}%;background:#c08a8a"></div></span>${this.b.ammoOn ? ` · 🏹 ${this.b.ammoPct(0)}% / 적 ${this.b.ammoPct(1)}%` : ''}</div>` : '';
       $('#b-timer').innerHTML = `${timer}${sup}${this.phase !== 'deploy' || cnt[1] ? `<div class="power" title="전투력"><div style="width:${pw[0] / tot * 100}%"></div><div style="width:${pw[1] / tot * 100}%"></div></div>` : ''}`;
       let hint = '';
       const touch = isCoarse();
@@ -987,7 +990,7 @@
       box.innerHTML = title + (rows ? `<div class="rows">${rows}</div>` : '') + anaHTML;
       const btns = el('div', 'btns');
       const B = (txt, cls, fn) => { const x = el('button', 'btn ' + cls, txt); x.onclick = fn; btns.appendChild(x); };
-      B('↺ 재배치', win && this.mode === 'challenge' ? '' : 'primary', () => this.rebuild());
+      if (!(this.sc && this.sc.noRetry)) B('↺ 재배치', win && this.mode === 'challenge' ? '' : 'primary', () => this.rebuild());
       if (this.mode === 'challenge') {
         const next = SW.STAGES[this.stage.index + 1];
         if (win && next) B('다음 스테이지 ▶', 'primary', () => { this.open('challenge', next); });

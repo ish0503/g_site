@@ -53,7 +53,6 @@ window.SW = window.SW || {};
     return d;
   };
 
-  let UID = 1;
   const BUFF_KEYS = ['atkSpd', 'dmg', 'armor', 'slow', 'atkSlow', 'speed', 'regen', 'crit', 'block', 'reflect', 'dodge', 'lifesteal', 'projTaken', 'covered'];
   SW.BUFF_KEYS = BUFF_KEYS;
   const newBuff = () => { const b = {}; for (const k of BUFF_KEYS) b[k] = 0; return b; };
@@ -80,6 +79,7 @@ window.SW = window.SW || {};
       this.visual = opts.visual !== false;
       this.quality = opts.quality || 'high';
       this.seed = opts.seed !== undefined ? opts.seed >>> 0 : (Math.random() * 4294967296) >>> 0;
+      this.uidNext = 1;      // 유닛 번호는 전투마다 1부터 (번호가 행동 주기에 쓰이므로 결정론에 필요)
       this._rng = SW.makeRng(this.seed);
       this.stats = [this.newTeamStats(), this.newTeamStats()];
       this.rec = [{}, {}];                      // 유닛 종류별 통계
@@ -99,7 +99,7 @@ window.SW = window.SW || {};
     _spawn(type, team, x, y, extra) {
       const d = this.def(type, team);
       const u = {
-        uid: UID++, type, def: d, team, x, y, vx: 0, vy: 0, kx: 0, ky: 0,
+        uid: this.uidNext++, type, def: d, team, x, y, vx: 0, vy: 0, kx: 0, ky: 0,
         r: d.size, mass: d.size * d.size, hp: d.hp, maxHp: d.hp, shield: 0, shieldLight: false, cd: rand() * 0.6,
         target: null, facing: team === 0 ? 0 : Math.PI, alive: true,
         burn: 0, burnDps: 0, poison: 0, poisonStacks: 0, poisonDps: 0, slowT: 0, slowAmt: 0, stun: 0, freeze: 0,

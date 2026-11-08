@@ -114,7 +114,7 @@ window.SW = window.SW || {};
       for (let ry = Math.floor((y - r) / tl); ry <= Math.floor((y + r) / tl); ry++) for (let cx = Math.floor((x - r) / tl); cx <= Math.floor((x + r) / tl); cx++) {
         if (cx < 0 || ry < 0 || cx >= this.cols || ry >= this.rows) continue;
         const i = cx + ry * this.cols;
-        if (T[this.t[i]].flammable) { this.setI(i, ID.fire); this.fires.set(i, 6 + Math.random() * 3); }
+        if (T[this.t[i]].flammable) { this.setI(i, ID.fire); this.fires.set(i, 6 + SW.util.rand() * 3); }
       }
     }
     crater(x, y, r) {
@@ -132,11 +132,11 @@ window.SW = window.SW || {};
         const nt = t - dt * ext;
         if (nt <= 0) { this.fires.delete(i); this.setI(i, ID.burnt); continue; }
         this.fires.set(i, nt);
-        if (spread && Math.random() < 0.3 / ext) {
+        if (spread && SW.util.rand() < 0.3 / ext) {
           const c = i % this.cols, r = (i / this.cols) | 0;
-          const n = [[1, 0], [-1, 0], [0, 1], [0, -1]][(Math.random() * 4) | 0];
+          const n = [[1, 0], [-1, 0], [0, 1], [0, -1]][(SW.util.rand() * 4) | 0];
           const j = (c + n[0]) + (r + n[1]) * this.cols;
-          if (c + n[0] >= 0 && c + n[0] < this.cols && r + n[1] >= 0 && r + n[1] < this.rows && T[this.t[j]].flammable) { this.setI(j, ID.fire); this.fires.set(j, 6 + Math.random() * 3); }
+          if (c + n[0] >= 0 && c + n[0] < this.cols && r + n[1] >= 0 && r + n[1] < this.rows && T[this.t[j]].flammable) { this.setI(j, ID.fire); this.fires.set(j, 6 + SW.util.rand() * 3); }
         }
       }
       if (this.fires.size) this.dirty = true;
@@ -146,7 +146,7 @@ window.SW = window.SW || {};
       const add = [];
       for (let i = 0; i < this.t.length; i++) if (T[this.t[i]].id === 'water') {
         const c = i % this.cols, r = (i / this.cols) | 0;
-        for (const [dx, dy] of [[1, 0], [-1, 0]]) { const j = (c + dx) + r * this.cols; if (c + dx >= 0 && c + dx < this.cols && ['plain', 'burnt', 'crater', 'forest'].includes(T[this.t[j]].id) && Math.random() < rate) add.push(j); }
+        for (const [dx, dy] of [[1, 0], [-1, 0]]) { const j = (c + dx) + r * this.cols; if (c + dx >= 0 && c + dx < this.cols && ['plain', 'burnt', 'crater', 'forest'].includes(T[this.t[j]].id) && SW.util.rand() < rate) add.push(j); }
       }
       for (const j of add) this.setI(j, ID.ford);
       return add.length;

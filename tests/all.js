@@ -5,6 +5,15 @@ const suites = ['run.js', 'save.test.js', 'classes.test.js', 'path.test.js'];
 for (const f of require('fs').readdirSync(__dirname)) if (/^w4.*\.test\.js$/.test(f)) suites.push(f);
 if (process.argv.includes('--perf')) suites.push('perf.test.js');
 let bad = 0;
+// 0) index.html 의 모든 스크립트 문법 검사 (UI·렌더러는 다른 시험에서 로드하지 않으므로)
+{
+  const fs = require('fs'), html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const files = [...html.matchAll(/<script src="(js\/[^"]+)"><\/script>/g)].map(m => m[1]);
+  const errs = [];
+  for (const f of files) { const r = spawnSync(process.execPath, ['--check', path.join(__dirname, '..', f)], { encoding: 'utf8' }); if (r.status !== 0) errs.push(f + ': ' + (r.stderr || '').split('\n').slice(0, 2).join(' ')); }
+  console.log(`${errs.length ? '✗' : '✓'} 문법 검사 (${files.length}개 스크립트)`); for (const e of errs) console.log('   ' + e);
+  if (errs.length) bad++;
+}
 for (const s of suites) {
   const t = Date.now();
   const r = spawnSync(process.execPath, [path.join(__dirname, s)], { encoding: 'utf8', timeout: 1800000 });

@@ -133,3 +133,53 @@
   UI.tabOrder = ['region', 'state', 'army', 'wars', 'diplo', 'tech', 'nations'];
   UI.topExtra = () => { const w = UI.world; const n = w.player ? w.wars.filter(x => War.side(x, w.player)).length : w.wars.length; return n ? `<span class="small" style="color:#ff8a7a">⚔️ 전쟁 ${n}</span>` : ''; };
 })();
+
+// ─────────────────────────────────────────────
+// Phase 6: 플레이어 군단의 교전 → 직접 지휘(실시간 전투 엔진) 또는 자동 계산
+// ─────────────────────────────────────────────
+(() => {
+  const { $, el, toast, go } = SW.ui;
+  const W4 = SW.W4, UI = W4.UI, A = W4.Army;
+  A.onPlayerBattle = () => 'pause';
+  const prevAfter = UI.afterMonth;
+  UI.afterMonth = (w) => { if (prevAfter) prevAfter(w); if (w.paused && w.paused.battle !== undefined) UI.battleDialog(w); };
+  const armies = (w, ids) => ids.map(id => w.armies.find(a => a.id === id)).filter(Boolean);
+  const cont = (w) => { w.advance(1); UI.R.dirty = true; UI.refresh(); if (UI.afterMonth) UI.afterMonth(w); };
+  UI.battleDialog = (w) => {
+    const P = w.paused, i = P.battle, r = w.map.regions[i];
+    const atk = armies(w, P.att), dfn = armies(w, P.def);
+    if (!atk.length || !dfn.length) { w.paused = null; cont(w); return; }
+    const side = (list) => `${UI.flagHTML(list[0].owner)} <b>${w.def(list[0].owner).name}</b> ${list.reduce((s, a) => s + A.size(a), 0).toFixed(1)}k · 전투력 ${list.reduce((s, a) => s + A.power(w, a), 0).toFixed(0)} · 사기 ${Math.round(list[0].morale * 100)}% · 보급 ${Math.round(list[0].supply * 100)}%`;
+    const box = el('div', 'w4modal');
+    box.innerHTML = `<div class="box"><h3>⚔ ${r.name} 에서 교전</h3><div class="small">${W4.TERRAIN[r.terrain].name} · 요새 ${w.state.regions[i].fort || 0}</div>
+      <div class="row">공격: ${side(atk)}</div><div class="row">방어: ${side(dfn)}</div>
+      <p class="small muted">직접 지휘하면 실시간 전투 엔진(경로 탐색·전술 AI·협공·보급·탄약)으로 싸우고, 생존 비율이 군단에 반영됩니다. 스킬 트리·직업 분기·장비가 아군에 적용됩니다.</p>
+      <div class="btns"><button class="btn primary" id="w4b-real">⚔ 직접 지휘</button><button class="btn" id="w4b-auto">⚡ 자동 계산</button></div></div>`;
+    document.body.appendChild(box); UI.fillFlags(box);
+    box.querySelector('#w4b-auto').onclick = () => {
+      box.remove(); w.paused = null;
+      const rec = A.resolve(w, i, atk, dfn);
+      toast(`${r.name} 전투: ${w.def(rec.winner).name} 승리`);
+      cont(w);
+    };
+    box.querySelector('#w4b-real').onclick = () => { box.remove(); UI.realBattle(w, i, atk, dfn); };
+  };
+  UI.realBattle = (w, i, atk, dfn) => {
+    const { sc, link } = W4.toBattle(w, i, atk, dfn);
+    const title = UI.titleText || $('#w4-title').textContent;
+    sc.onStart = (b) => W4.countBattle(link, b);
+    let applied = null;
+    sc.onFinish = (b) => {
+      applied = W4.applyBattle(w, link, b);
+      w.paused = null;
+      const won = applied && applied.winner === w.player;
+      return { title: won ? '<h2 class="win">전투 승리!</h2>' : '<h2 class="lose">전투 패배</h2>', rows: applied ? `<div>세계 반영: 아군 손실 ${(applied.att === w.player ? applied.attLost : applied.defLost).toFixed(1)}k · 적 손실 ${(applied.att === w.player ? applied.defLost : applied.attLost).toFixed(1)}k</div>` : '',
+        buttons: [{ text: '🌍 세계로 돌아가기', cls: 'primary', fn: async () => {
+          // 리플레이를 보관함에 저장하고 세계 전투 기록에 연결
+          try { if (b.replay && SW.Replay.save) { const rr = await SW.Replay.save(b.replay, `${w.dateStr()} ${w.map.regions[i].name} 전투`); if (applied) applied.replay = rr.id; } } catch (e) { /* 저장소 없음 */ }
+          UI.open(w, { title, tab: 'wars', back: 'w4menu' }); cont(w);
+        } }] };
+    };
+    SW.ui.Battle.open('scenario', sc); go('battle');
+  };
+})();

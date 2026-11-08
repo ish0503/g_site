@@ -161,7 +161,7 @@
       const defSide = sides[1].some(a => a.owner === ctrl || W4.War.side(war, a.owner) === W4.War.side(war, ctrl)) ? 1 : 0;
       const atk = sides[1 - defSide], dfn = sides[defSide];
       const player = w.player && [...atk, ...dfn].some(a => a.owner === w.player);
-      if (player && A.onPlayerBattle) { const r = A.onPlayerBattle(w, i, atk, dfn); if (r === 'pause') { w.paused = { battle: i }; return; } }
+      if (player && A.onPlayerBattle && !w.flags.autoBattles) { const r = A.onPlayerBattle(w, i, atk, dfn); if (r === 'pause') { w.paused = { battle: i, att: atk.map(a => a.id), def: dfn.map(a => a.id) }; return; } }
       resolve(w, i, atk, dfn);
     }
     // 공성: 적대 지역에 홀로 있는 군단
@@ -204,7 +204,7 @@
     const size0 = [atk.reduce((x, a) => x + A.size(a), 0), dfn.reduce((x, a) => x + A.size(a), 0)];
     let pa = P(atk, false), pd = P(dfn, true);
     let ma = 1, md = 1;
-    for (let round = 0; round < 6 && ma > 0.25 && md > 0.25; round++) {
+    for (let round = 0; !forced && round < 6 && ma > 0.25 && md > 0.25; round++) {
       const la = pd / (pa + pd) * 0.12, ld = pa / (pa + pd) * 0.12;
       for (const a of atk) scale(a, 1 - la); for (const a of dfn) scale(a, 1 - ld);
       ma -= ld < la ? (la - ld) * 3 + 0.05 : 0.05; md -= la < ld ? (ld - la) * 3 + 0.05 : 0.05;

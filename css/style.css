@@ -453,3 +453,6 @@ body.replaying #b-start, body.replaying #b-pause, body.replaying #b-reset, body.
 .w4army.sel { border-color: #ffe066; background: rgba(255,224,102,.08); }
 .w4war { padding: 6px; border: 1px solid var(--line); border-radius: 6px; margin: 6px 0; }
 .w4war .hpbar { margin: 4px 0; }
+.w4modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+.w4modal .box { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; max-width: 460px; width: 100%; }
+.w4modal .row { margin: 6px 0; font-size: 13px; }

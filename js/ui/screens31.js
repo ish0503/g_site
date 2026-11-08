@@ -61,6 +61,10 @@
       if (g.evo && evo) h += `<button class="btn small" id="evo-undo">진화 해제 (환급)</button>`;
       if (g.cls) h += ` <a href="#" id="cls-reset" class="small">직업 초기화 (💎1, 상위 직업 비용은 환급되지 않음)</a>`;
     }
+    if (T) {
+      // 3.2: 전문화 통합 — Lv5 에 갈래(직업)와 보조 전문화를 함께 고른다
+      h += `<h4>🎯 보조 전문화 (Lv.5)</h4><div class="btnrow">` + Object.entries(SW.SPECS).map(([k, sp]) => `<button class="btn small ${g.spec === k ? 'primary' : ''}" data-spec2="${k}" ${g.lv < 5 || g.spec ? 'disabled' : ''} title="${sp.desc}">${sp.icon} ${sp.name}</button>`).join('') + `</div>${g.spec ? `<div class="small">${SW.SPECS[g.spec].name}: ${SW.SPECS[g.spec].desc}</div>` : '<div class="small muted">직업 갈래와 함께 적용되는 능력치 특화</div>'}`;
+    }
     h += `<h4>✨ 특성 (Lv.3 · Lv.7)</h4>`;
     for (const [tier, lv] of [[1, 3], [2, 7]]) {
       const cur = g.traits[tier - 1];
@@ -71,6 +75,10 @@
     if (g.traits.some(Boolean)) h += `<a href="#" id="tr-reset" class="small">특성 초기화 (💎1)</a>`;
     box.innerHTML = h;
     det.insertBefore(box, $('#army-card'));
+    if (T) {   // 기존 전문화 줄은 직업 트리 패널로 옮겼으므로 숨긴다 (초기화 링크는 유지)
+      for (const h4 of det.querySelectorAll(':scope > h4')) if (h4.textContent.startsWith('전문화')) { h4.hidden = true; const row = h4.nextElementSibling; if (row && row.classList.contains('row')) row.hidden = true; }
+    }
+    box.querySelectorAll('[data-spec2]').forEach(x => x.onclick = () => { g.spec = x.dataset.spec2; redo(); });
     if (T && g.sub) { const ev = $('#evo'); if (ev) ev.disabled = true; }
     const redo = () => { save.write(); S.army(); };
     box.querySelectorAll('[data-cn]').forEach(x => x.onclick = () => {
