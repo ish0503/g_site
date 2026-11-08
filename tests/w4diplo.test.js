@@ -49,4 +49,11 @@ T('국가 AI 20년: 오류 없음·조약 형성·건설·결정론', () => {
   const fin = W4.NATIONS.every(n => Object.values(w.nations[n.id].res).every(Number.isFinite));
   return { ok: a.s === b.s && fin && w.diplo.treaties.length > 5 && blds > 50, info: `${a.ms}ms · 조약 ${JSON.stringify(types)} · 건물 ${blds}` };
 });
+T('저장→불러오기: 외교 상태 보존·이어서 동일 진행', () => {
+  const a = new W4.World({ seed: 5 }); a.advance(40);
+  const b = W4.World.fromJSON(JSON.parse(JSON.stringify(a.toJSON())));
+  const same0 = JSON.stringify(a.diplo) === JSON.stringify(b.diplo);
+  a.advance(40); b.advance(40);
+  return { ok: same0 && JSON.stringify(a.toJSON()) === JSON.stringify(b.toJSON()), info: `조약 ${b.diplo.treaties.length}` };
+});
 console.log(`\n${pass} passed, ${fail} failed`);

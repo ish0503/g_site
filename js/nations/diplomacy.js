@@ -174,8 +174,10 @@
 
   W4.system({
     id: 'diplomacy', order: 30,
+    save(w, o) { o.diplo = w.diplo; },
+    load(w, o) { w.diplo = o.diplo || { rel: {}, treaties: [], cb: [], pending: [], inbox: [] }; w.diplo.asked = w.diplo.asked || {}; },
     init(w) {
-      w.diplo = { rel: {}, treaties: [], cb: [], pending: [], inbox: [] };
+      w.diplo = { rel: {}, treaties: [], cb: [], pending: [], inbox: [], asked: {} };
       // 초기 관계: 같은 대륙 이웃은 긴장, 같은 정치 체제·특성은 호감
       for (const a of W4.NATIONS) for (const b of W4.NATIONS) {
         if (a.id >= b.id) continue;
