@@ -448,3 +448,4 @@ body.replaying #b-start, body.replaying #b-pause, body.replaying #b-reset, body.
 .w4-panel .btn.on { outline: 2px solid #ffcf4d; }
 #w4-top span { white-space: nowrap; }
 @media (max-width: 760px) { #w4-top { font-size: 11px; gap: 4px; } }
+.w4n tr.sel { background: rgba(255,207,77,.12); }
