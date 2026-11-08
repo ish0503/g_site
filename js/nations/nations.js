@@ -181,6 +181,14 @@
     n.queue.push({ kind: 'city', r: i, left: 6 });
     return { ok: true };
   };
+  // 시장: 금으로 자원 구입 (가격 = 자원 가치 × 3, 한 달 300 단위까지)
+  W4.Act.buyRes = (w, id, res, n) => {
+    const N = w.nations[id]; if (!W4.RES[res] || res === 'gold' || n <= 0) return { ok: false, msg: '구입할 수 없는 자원' };
+    N.bought = N.bought && N.bought.t === w.turn ? N.bought : { t: w.turn, n: 0 };
+    n = Math.min(n, 300 - N.bought.n); if (n <= 0) return { ok: false, msg: '이번 달 구입 한도(300) 초과' };
+    const price = Math.round(W4.RES_VALUE[res] * 3 * n); if (N.res.gold < price) return { ok: false, msg: `금 ${price} 필요` };
+    N.res.gold -= price; N.res[res] += n; N.bought.n += n; return { ok: true, price };
+  };
   W4.Act.setTax = (w, id, p) => { if (!W4.TAX[p]) return { ok: false }; w.nations[id].tax = p; return { ok: true }; };
   W4.cityOf = (w, i) => w.map.regions[i].city || w.state.regions[i].city || null;
 

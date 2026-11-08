@@ -69,12 +69,14 @@
     const where = UI.sel >= 0 && w.state.regions[UI.sel].owner === id && !w.state.regions[UI.sel].occ && (W4.cityOf(w, UI.sel) || w.state.regions[UI.sel].bld.barracks) ? UI.sel : w.map.nations[id].capital;
     h += `<h4>모집 — ${w.map.regions[where].root} <small class="muted">(도시·병영 지역을 지도에서 선택)</small></h4><div class="btnrow">` + CLS.map(k => { const C = W4.UNIT_CLASSES[k]; return `<button class="btn small" data-rec="${k}" title="공격 ${C.atk} · 방어 ${C.def} · 유지 금 ${C.upkeep}/식량 ${C.food}">${C.icon}${C.name} ×1 <small>${Object.entries(C.cost).map(([r, v]) => W4.RES[r].icon + v).join('')} 👥${C.mp}</small></button>`; }).join('') + '</div>';
     h += `<div class="btnrow"><button class="btn small" data-rec5="inf">보병 ×5</button><button class="btn small" data-rec5="arc">궁병 ×5</button><button class="btn small" data-rec5="cav">기병 ×5</button></div>`;
+    h += `<div class="btnrow"><button class="btn small" data-merc="inf" title="인력 없이 금 2.5배">💰 용병 보병 ×3</button><button class="btn small" data-merc="cav">💰 용병 기병 ×3</button></div>`;
     p.innerHTML = h;
     p.querySelectorAll('[data-army]').forEach(x => x.onclick = () => { UI.armySel = +x.dataset.army; UI.fleetSel = null; const a = w.armies.find(b => b.id === UI.armySel); if (a) { UI.sel = a.loc; UI.R.sel = a.loc; } UI.show('army'); });
     p.querySelectorAll('[data-merge]').forEach(b => b.onclick = () => UI.act(W4.Act.merge(w, id, sel.id, +b.dataset.merge)));
     p.querySelectorAll('[data-stop]').forEach(b => b.onclick = () => { sel.path = []; sel.mode = 'idle'; UI.show('army'); });
     p.querySelectorAll('[data-disband]').forEach(b => b.onclick = () => { if (confirm('군단을 해산할까요? (인력 절반 회수)')) { UI.armySel = null; UI.act(W4.Act.disband(w, id, sel.id)); } });
     p.querySelectorAll('[data-rec]').forEach(b => b.onclick = () => UI.act(W4.Act.recruit(w, id, where, b.dataset.rec, 1, sel && sel.loc === where ? sel.id : null)));
+    p.querySelectorAll('[data-merc]').forEach(b => b.onclick = () => UI.act(W4.Act.recruit(w, id, where, b.dataset.merc, 3, sel && sel.loc === where ? sel.id : null, true)));
     p.querySelectorAll('[data-rec5]').forEach(b => b.onclick = () => UI.act(W4.Act.recruit(w, id, where, b.dataset.rec5, 5, sel && sel.loc === where ? sel.id : null)));
   });
 

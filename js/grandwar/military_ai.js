@@ -19,11 +19,11 @@
     const N = w.nations[id], P = W4.AI_PROFILE[w.def(id).ai];
     const army = A.list(w, id).reduce((s, a) => s + A.size(a), 0);
     const atWar = War.inWar(w, id);
-    const target = N.manpowerMax * (atWar ? 0.7 : 0.3) * P.war + 6;
+    const target = N.manpowerMax * (atWar ? 0.7 : 0.3) * P.war + 6 + Math.min(30, N.res.gold / 400);
     // 식량: 기근이면 군대를 줄이고, 식량 순수입이 부족하면 모집하지 않는다
     const foodNet = (N.income.food || 0) - (N.spent.food || 0);
     if (N.famine || N.res.food < 30) { const big = A.list(w, id).sort((a, b) => A.size(b) - A.size(a))[0]; if (big && A.size(big) > 3) { for (const c of CLS) big.u[c] *= 0.85; N.manpower += A.size(big) * 0.15 * 0.5; } return; }
-    if (army >= target || foodNet < 1.5) return;
+    if (army >= target || (foodNet < 1.5 && N.res.food < 300)) return;
     // 모집 장소: 전쟁 중이면 전선에 가까운 도시, 아니면 수도
     const cand = w.ownedRegions(id).filter(i => !w.state.regions[i].occ && (W4.cityOf(w, i) || w.state.regions[i].bld.barracks));
     if (!cand.length) return;
@@ -39,7 +39,7 @@
       const cls = CLS.slice().sort((a, b) => (cur[a] / tot - m[a]) - (cur[b] / tot - m[b]))[0];
       const cost = A.recruitCost(w, id, cls, 1);
       if (N.res.gold - cost.gold < reserve) break;
-      if (!W4.Act.recruit(w, id, where, cls, 1).ok) { if (!W4.Act.recruit(w, id, where, 'inf', 1).ok) break; }
+      if (!W4.Act.recruit(w, id, where, cls, 1).ok) { if (!W4.Act.recruit(w, id, where, 'inf', 1).ok) { if (!(N.res.gold > 1200 && W4.Act.recruit(w, id, where, cls, 1, null, true).ok)) break; } }
     }
   }
 
@@ -137,11 +137,12 @@
       const ratio = myP / Math.max(1, sidePower(w, o, id));
       const cb = D.cbs(w, id, o).length > 0;
       const s = ratio * P.war * (cb ? 1.3 : 0.7) - D.rel(w, id, o) * 0.01;
-      if (ratio > 1.35 && s > bs) { bs = s; best = o; }
+      if (ratio > 1.15 - Math.min(0.2, N.res.gold / 20000) && s > bs) { bs = s; best = o; }
     }
     if (!best) return;
     const cb = D.cbs(w, id, best).length > 0;
-    const chance = cb ? 0.06 * P.war : d.ai === 'conqueror' ? 0.012 : 0;
+    // 부유한 국가일수록 전쟁에 적극적 (쌓인 금을 전쟁으로 소모)
+    const chance = (cb ? 0.1 * P.war : d.ai === 'conqueror' ? 0.03 : d.ai === 'opportunist' || d.ai === 'zealot' ? 0.015 : 0.004) * (1 + Math.min(2, N.res.gold / 5000));
     if (w.rand() < chance) W4.Act.declareWar(w, id, best);
   };
   function peaceAI(w, war, id) {

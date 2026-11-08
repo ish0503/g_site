@@ -6,7 +6,7 @@
 (() => {
   const W4 = SW.W4, D = W4.Diplo;
   const PROFILE = {
-    conqueror: { build: ['barracks', 'mine', 'farm', 'market', 'fortress'], alliance: 0.4, trade: 0.3, war: 1.4, fabricate: 0.25 },
+    conqueror: { build: ['barracks', 'mine', 'farm', 'market', 'fortress'], alliance: 0.4, trade: 0.3, war: 1.4, fabricate: 0.35 },
     builder: { build: ['farm', 'market', 'academy', 'fortress', 'mine', 'lumber'], alliance: 0.6, trade: 0.6, war: 0.6, fabricate: 0.05 },
     trader: { build: ['market', 'shipyard', 'farm', 'lumber', 'academy'], alliance: 0.5, trade: 1, war: 0.7, fabricate: 0.05 },
     zealot: { build: ['farm', 'barracks', 'academy', 'market', 'fortress'], alliance: 0.5, trade: 0.4, war: 1.1, fabricate: 0.15 },
@@ -23,7 +23,9 @@
     const foodNet = (N.income.food || 0) - (N.spent.food || 0);
     const order = foodNet < 2 ? ['farm', ...P.build] : P.build;
     const reserve = N.atWar ? 250 : 120;                  // 전쟁 대비 금 비축
-    if (N.queue.length < 3 && N.res.gold > reserve) {
+    const slots = N.res.gold > 1500 ? 6 : 3;          // 부유하면 동시 공사 확대
+    for (let pass = 0; pass < (N.res.gold > 1500 ? 2 : 1); pass++)
+    if (N.queue.length < slots && N.res.gold > reserve) {
       const regs = w.ownedRegions(id).filter(i => !w.state.regions[i].occ);
       let done = false;
       for (const b of order) {
@@ -41,6 +43,8 @@
       }
       if (!done && N.res.gold > reserve + 150) { const cap = w.map.nations[id] && w.map.nations[id].capital; const c = regs.sort((a, b) => w.state.regions[b].pop - w.state.regions[a].pop)[0]; if (c !== undefined) W4.Act.develop(w, id, c); }
     }
+    // 부유하면 시장에서 식량·철·목재를 사서 군대 유지
+    if (N.res.gold > 800) { if (N.res.food < 400) W4.Act.buyRes(w, id, 'food', 200); else if (N.res.iron < 150) W4.Act.buyRes(w, id, 'iron', 100); else if (N.res.wood < 150) W4.Act.buyRes(w, id, 'wood', 100); }
     // 연구 선호: 전쟁 중이면 군사
     N.research.pref = N.atWar ? 'mil' : null;
   }

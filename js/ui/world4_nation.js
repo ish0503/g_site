@@ -78,9 +78,11 @@
       <tr><td>인력</td><td>${Math.round(N.manpower)} / ${Math.round(N.manpowerMax)}천</td></tr><tr><td>연구력</td><td>${st.research.toFixed(1)}/월</td></tr><tr><td>전쟁 피로</td><td>${Math.round(N.exhaustion)}</td></tr></table>
       <h4>세율</h4><div class="seg">${Object.entries(W4.TAX).map(([k, t]) => `<button data-tax="${k}" class="${N.tax === k ? 'on' : ''}">${t.name} (×${t.mul}, 안정 ${t.stab >= 0 ? '+' : ''}${t.stab})</button>`).join('')}</div>
       <h4>자원 (월 수입/지출)</h4><table class="w4t">${rows}</table>
+      <h4>🏪 시장 (금으로 구입, 월 300단위)</h4><div class="btnrow">${['food', 'wood', 'iron', 'stone', 'horses', 'mana', 'coal'].map(k => `<button class="btn small" data-buy="${k}">${W4.RES[k].icon}+100 <small>💰${Math.round(W4.RES_VALUE[k] * 300)}</small></button>`).join('')}</div>
       <h4>건설 대기열 (${N.queue.length}/6)</h4>${N.queue.length ? N.queue.map(q => `<div class="small">${w.map.regions[q.r].root}: ${q.kind === 'b' ? W4.BUILDINGS[q.key].name : q.kind === 'dev' ? '개발' : '도시 건설'} — ${q.left}개월</div>`).join('') : '<div class="small muted">비어 있음 — 지역을 눌러 건설하세요</div>'}
       <h4>국가 수정자</h4><div class="small muted">${Object.entries(M).filter(([, v]) => v).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${Math.abs(v) < 1 ? Math.round(v * 100) + '%' : v}`).join(' · ')}</div>`;
     p.querySelectorAll('[data-tax]').forEach(b => b.onclick = () => act(W4.Act.setTax(w, id, b.dataset.tax)));
+    p.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => act(W4.Act.buyRes(w, id, b.dataset.buy, 100)));
   });
   // ── 기술 패널 ──
   UI.register('tech', '🔬 기술', (p, w) => {

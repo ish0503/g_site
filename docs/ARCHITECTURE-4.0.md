@@ -53,3 +53,18 @@ AI 끼리의 교전은 같은 전투 규칙(상성·사기·지형)을 요약한
 
 ## 4. 결정론
 세계 시뮬레이션은 세계마다 `SW.makeRng(seed)` 를 쓰고 `Math.random` 을 쓰지 않는다. 같은 시드·같은 입력이면 같은 결과가 나와야 한다 (`tests/world.test.js`).
+
+## 5. 시험
+| 묶음 | 내용 |
+|---|---|
+| tests/all.js | 모든 스크립트 문법 검사 + 아래 묶음 실행 (`--perf` 로 성능 회귀 포함) |
+| run.js · classes · path | 2.0~3.1 전투 회귀 (시드 고정) |
+| save.test.js | 1.0/3.0 → 4.0 마이그레이션, 원본 백업, 손상 복구, 세계 슬롯 |
+| w4map · w4econ · w4diplo · w4war · w4battle · w4naval · w4unrest · w4modes | 4.0 각 계층, 결정론, 저장→불러오기 후 동일 진행 |
+| perf.test.js | 1,000·2,500·5,000기 전투 계산 시간 (기준 대비 1.3배 초과 시 실패) |
+| w4balance.js | AI 장기 시뮬레이션 통계 (분석 도구) |
+
+## 6. 결정론 관련 수정 (Phase 6 에서 발견)
+- 전투 진입점(spawn·start·addAI·보급/탄약/전선 활성화·명령·소환)을 전투 RNG 안에서 실행 (`js/battle/determinism.js`)
+- 유닛 번호를 전투마다 1부터 (번호가 갱신 주기에 쓰임)
+- 지형 화재·범람 확산이 Math.random 대신 전투 RNG 사용

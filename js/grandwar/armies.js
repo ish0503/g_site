@@ -50,16 +50,23 @@
   // ── 모집 ──
   W4.Act = W4.Act || {};
   A.recruitCost = (w, id, cls, n) => { const C = W4.UNIT_CLASSES[cls], c = {}; for (const k in C.cost) c[k] = C.cost[k] * n; c.manpower = C.mp * n; return c; };
-  W4.Act.recruit = (w, id, i, cls, n = 1, armyId = null) => {
+  // merc: 용병 — 인력 없이 금 2.5배 (자원 비용은 금으로 대체)
+  W4.Act.recruit = (w, id, i, cls, n = 1, armyId = null, merc = false) => {
     const N = w.nations[id], s = w.state.regions[i], r = w.map.regions[i], C = W4.UNIT_CLASSES[cls];
     if (!C || n < 1) return { ok: false, msg: '잘못된 병과' };
     if (s.owner !== id || s.occ) return { ok: false, msg: '자국이 통제하는 지역에서만 모집' };
     if (!W4.cityOf(w, i) && !(s.bld && s.bld.barracks)) return { ok: false, msg: '도시나 병영이 있는 지역에서만 모집' };
     const cost = A.recruitCost(w, id, cls, n);
-    if (N.manpower < cost.manpower) return { ok: false, msg: '인력 부족' };
-    for (const k in C.cost) if ((N.res[k] || 0) < cost[k]) return { ok: false, msg: `${W4.RES[k].name} 부족` };
-    for (const k in C.cost) N.res[k] -= cost[k];
-    N.manpower -= cost.manpower;
+    if (merc) {
+      const g = Math.round(C.cost.gold * n * 2.5 + Object.entries(C.cost).filter(([k]) => k !== 'gold').reduce((x, [, v]) => x + v * n, 0));
+      if (N.res.gold < g) return { ok: false, msg: `금 ${g} 필요` };
+      N.res.gold -= g;
+    } else {
+      if (N.manpower < cost.manpower) return { ok: false, msg: '인력 부족' };
+      for (const k in C.cost) if ((N.res[k] || 0) < cost[k]) return { ok: false, msg: `${W4.RES[k].name} 부족` };
+      for (const k in C.cost) N.res[k] -= cost[k];
+      N.manpower -= cost.manpower;
+    }
     let a = armyId != null ? w.armies.find(x => x.id === armyId && x.owner === id && x.loc === i) : A.at(w, i).find(x => x.owner === id && x.mode !== 'move');
     if (!a) a = A.create(w, id, i);
     a.u[cls] = (a.u[cls] || 0) + n; a.train = Math.max(a.train || 0, 1);
