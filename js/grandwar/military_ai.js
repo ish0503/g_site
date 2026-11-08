@@ -120,6 +120,7 @@
   W4.NationAI.war = (w, id) => {
     const N = w.nations[id], d = w.def(id), P = W4.AI_PROFILE[d.ai];
     if (w.flags.noWar) return;                // 시나리오·시험용: AI 선전포고 없음
+    if (w.flags.activeCont && d.cont !== w.flags.activeCont) { for (const war of w.wars.slice()) if (war.lead.includes(id)) peaceAI(w, war, id); return; }   // 대륙 전쟁: 다른 대륙은 관망
     // 평화 판단
     for (const war of w.wars.slice()) if (war.lead.includes(id)) peaceAI(w, war, id);
     if (War.inWar(w, id) && P.war < 1.3) return;
@@ -147,6 +148,8 @@
     const side = War.side(war, id), sc = side === 'att' ? war.score : -war.score, months = w.turn - war.start;
     const other = side === 'att' ? war.lead[1] : war.lead[0];
     const N = w.nations[id];
+    // 세계 대전: 진영 전쟁은 3년 이상 또는 결정적 우세(60+)일 때만 강화
+    if (w.scenario === 'worldwar' && months < 36 && Math.abs(sc) < 60) return;
     if (sc >= 25 && (months >= 10 || sc >= 55)) {
       // 점령지 중 가치 높은 순서로, 수용 가능 범위까지
       const ours = side === 'att' ? war.att : war.def, theirs = side === 'att' ? war.def : war.att;

@@ -31,6 +31,7 @@
       for (const n of W4.NATIONS) this.nations[n.id] = { id: n.id, alive: true };
       if (opts.setup) opts.setup(this);            // 시나리오별 소유권 조정 등 (시스템 init 전에)
       for (const s of systems) if (s.init) s.init(this, opts);
+      if (opts.after) opts.after(this);              // 시나리오: 조약·전쟁 등 시스템 초기화 이후 설정
     }
     rand() { return rnd(this); }
     pick(arr) { return arr[(this.rand() * arr.length) | 0]; }
