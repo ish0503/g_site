@@ -65,33 +65,43 @@
         for (let r = Math.max(0, gr - 4); r <= Math.min(rows - 1, gr + 4); r++) for (let c = Math.max(0, gc - 4); c <= Math.min(cols - 1, gc + 4); c++) { const i = c + r * cols; if (cost[i] < Infinity) { const d = (c - gc) ** 2 + (r - gr) ** 2; if (d < bd) { bd = d; best = i; } } }
         if (best < 0) return null; goal = best;
       }
+      // 이진 힙 (인라인, 클로저 없음) + 8방향 오프셋 사전 계산
       const heap = this.heap, hk = this.hk; let hn = 0;
-      // 이진 힙 (배열 할당 없는 교환)
-      const push = (i, k) => {
-        let j = hn++;
-        while (j > 0) { const p = (j - 1) >> 1; if (hk[p] <= k) break; heap[j] = heap[p]; hk[j] = hk[p]; j = p; }
-        heap[j] = i; hk[j] = k;
-      };
-      const pop = () => {
-        const top = heap[0]; hn--;
-        const li = heap[hn], lk = hk[hn]; let j = 0;
-        for (;;) { const l = 2 * j + 1, r = l + 1; let m = -1, mk = lk; if (l < hn && hk[l] < mk) { m = l; mk = hk[l]; } if (r < hn && hk[r] < mk) { m = r; mk = hk[r]; } if (m < 0) break; heap[j] = heap[m]; hk[j] = hk[m]; j = m; }
-        heap[j] = li; hk[j] = lk;
-        return top;
-      };
-      dist[goal] = 0; push(goal, 0);
-      const D = Math.SQRT2;
+      const D = Math.SQRT2, last = cols - 1, lastR = rows - 1;
+      dist[goal] = 0; heap[0] = goal; hk[0] = 0; hn = 1;
       while (hn > 0) {
-        const kd = hk[0], i = pop();
+        const kd = hk[0], i = heap[0];
+        // pop
+        hn--;
+        if (hn > 0) {
+          const li = heap[hn], lk = hk[hn]; let j = 0;
+          for (;;) { const l = 2 * j + 1; if (l >= hn) break; let m = l; if (l + 1 < hn && hk[l + 1] < hk[l]) m = l + 1; if (hk[m] >= lk) break; heap[j] = heap[m]; hk[j] = hk[m]; j = m; }
+          heap[j] = li; hk[j] = lk;
+        }
         if (kd > dist[i]) continue;
-        const c = i % cols, r = (i - c) / cols;
-        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-          if (!dx && !dy) continue;
-          const nc = c + dx, nr = r + dy; if (nc < 0 || nr < 0 || nc >= cols || nr >= rows) continue;
-          const j = nc + nr * cols, cj = cost[j]; if (cj === Infinity) continue;
-          if (dx && dy && (cost[c + dx + r * cols] === Infinity || cost[c + (r + dy) * cols] === Infinity)) continue;    // 모서리 끼임 방지
-          const nd = kd + (dx && dy ? D : 1) * (cj + cost[i]) * 0.5;
-          if (nd < dist[j]) { dist[j] = nd; push(j, nd); }
+        const c = i % cols, r = (i - c) / cols, ci = cost[i];
+        const cL = c > 0, cR = c < last, rU = r > 0, rD = r < lastR;
+        for (let k = 0; k < 8; k++) {
+          let j, diag = false;
+          switch (k) {
+            case 0: if (!cL) continue; j = i - 1; break;
+            case 1: if (!cR) continue; j = i + 1; break;
+            case 2: if (!rU) continue; j = i - cols; break;
+            case 3: if (!rD) continue; j = i + cols; break;
+            case 4: if (!cL || !rU || cost[i - 1] === Infinity || cost[i - cols] === Infinity) continue; j = i - cols - 1; diag = true; break;
+            case 5: if (!cR || !rU || cost[i + 1] === Infinity || cost[i - cols] === Infinity) continue; j = i - cols + 1; diag = true; break;
+            case 6: if (!cL || !rD || cost[i - 1] === Infinity || cost[i + cols] === Infinity) continue; j = i + cols - 1; diag = true; break;
+            default: if (!cR || !rD || cost[i + 1] === Infinity || cost[i + cols] === Infinity) continue; j = i + cols + 1; diag = true;
+          }
+          const cj = cost[j]; if (cj === Infinity) continue;
+          const nd = Math.fround(kd + (diag ? D : 1) * (cj + ci) * 0.5);   // dist·hk 가 Float32 이므로 같은 정밀도로 비교 (반복 재삽입 방지)
+          if (nd < dist[j]) {
+            dist[j] = nd;
+            // push
+            let q = hn++;
+            while (q > 0) { const p = (q - 1) >> 1; if (hk[p] <= nd) break; heap[q] = heap[p]; hk[q] = hk[p]; q = p; }
+            heap[q] = j; hk[q] = nd;
+          }
         }
       }
       f = { dist, goal };

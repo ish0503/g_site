@@ -1,14 +1,23 @@
 // 테스트 하네스: index.html 의 전투 관련 스크립트를 Node vm 에 로드 (UI·렌더러 제외)
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const ROOT = path.join(__dirname, '..');
-function load() {
+function load(opts = {}) {
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const files = [...html.matchAll(/<script src="(js\/[^"]+)"><\/script>/g)].map(m => m[1])
     .filter(f => !f.startsWith('js/ui/') && !f.startsWith('js/render/') && f !== 'js/core/save.js');
-  const ctx = { console, Math, JSON, Set, Map, WeakMap, Object, Array, Infinity, isFinite, Number, String, Uint8Array, Int16Array, Int32Array, Float32Array, Date, Error, Promise, setTimeout, performance: { now: () => Number(process.hrtime.bigint()) / 1e6 } };
-  ctx.window = ctx; vm.createContext(ctx);
-  for (const f of files) vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
-  const SW = ctx.SW;
+  let SW;
+  if (opts.sandbox) {
+    // 격리 실행 (전역 접근이 인터셉터를 거쳐 느림 — 성능 측정에는 쓰지 말 것)
+    const ctx = { console, Math, JSON, Set, Map, WeakMap, Object, Array, Infinity, isFinite, Number, String, Uint8Array, Int16Array, Int32Array, Float32Array, Date, Error, Promise, setTimeout, performance: { now: () => Number(process.hrtime.bigint()) / 1e6 } };
+    ctx.window = ctx; vm.createContext(ctx);
+    for (const f of files) vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
+    SW = ctx.SW;
+  } else {
+    // 브라우저와 같은 방식: 실제 전역에서 실행 (기본값, 성능 측정용)
+    globalThis.window = globalThis; delete globalThis.SW;
+    for (const f of files) vm.runInThisContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), { filename: f });
+    SW = globalThis.SW;
+  }
   // 메모리 저장소
   const data = { gold: 0, res: { food: 0, wood: 0, ore: 0, mana: 0, crystal: 0 }, growth: {}, items: {}, equip: {}, skills: ['c_root', 't_root'], cleared: {}, aiLearn: {} };
   SW.save = { data, write() {}, mods() { const m = SW.buildMods(data.skills); SW.growthMods(m); return m; } };
