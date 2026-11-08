@@ -37,7 +37,7 @@
     $$('#w4-modes button').forEach(b => b.onclick = () => { $$('#w4-modes button').forEach(x => x.classList.toggle('on', x === b)); UI.R.setMode(b.dataset.m); });
     $$('.w4-zoom button').forEach(b => b.onclick = () => { const z = +b.dataset.z, r = UI.R.cv.getBoundingClientRect(); if (!z) UI.R.fit(); else UI.R.zoom(z, r.width / 2, r.height / 2); });
     $('#w4-back').onclick = () => { if (UI.onExit) UI.onExit(); else go(UI.backTo || 'menu'); };
-    W4.bindMapInput(UI.R, (id, sea) => { UI.sel = id; UI.selSea = id < 0 ? sea : -1; UI.R.sel = id; if (id >= 0 || sea >= 0) UI.show(UI.tabs.region ? 'region' : UI.tab); }, (id, p) => {
+    W4.bindMapInput(UI.R, (id, sea) => { if (UI.pickHook && UI.pickHook(id, sea)) return; UI.sel = id; UI.selSea = id < 0 ? sea : -1; UI.R.sel = id; if (id >= 0 || sea >= 0) UI.show(UI.tabs.region ? 'region' : UI.tab); }, (id, p) => {
       UI.R.hover = id; const tip = $('#w4-tip');
       if (id < 0) { tip.hidden = true; return; }
       const r = UI.world.map.regions[id], s = UI.world.state.regions[id];

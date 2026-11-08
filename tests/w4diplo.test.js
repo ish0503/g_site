@@ -3,7 +3,7 @@ const { load } = require('./harness');
 const SW = load(); const W4 = SW.W4, D = W4.Diplo;
 let pass = 0, fail = 0;
 const T = (name, fn) => { try { const r = fn(); console.log(`${r.ok ? 'PASS' : 'FAIL'} ${name} ${r.info || ''}`); r.ok ? pass++ : fail++; } catch (e) { console.log('FAIL', name, e.stack.split('\n').slice(0, 3).join(' | ')); fail++; } };
-const NW = (o = {}) => new W4.World(Object.assign({ seed: 40, player: 'valor' }, o));
+const NW = (o = {}) => new W4.World(Object.assign({ seed: 40, player: 'valor', flags: { noWar: true } }, o));
 T('초기 관계: 대칭 키, 범위 -100~100', () => { const w = NW(); const v = Object.values(w.diplo.rel); return { ok: v.length === 120 && v.every(x => x >= -100 && x <= 100) && D.rel(w, 'valor', 'ferrum') === D.rel(w, 'ferrum', 'valor') }; });
 T('제안: 관계 좋으면 무역 수락, 나쁘면 동맹 거절', () => {
   const w = NW(); D.addRel(w, 'valor', 'marea', 200); const a = W4.Act.propose(w, 'valor', 'marea', 'trade');

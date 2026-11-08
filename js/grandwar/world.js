@@ -24,7 +24,7 @@
       this.scenario = opts.scenario || 'conquest';
       this.diff = opts.diff ?? 1;
       this.log = [];                               // 최근 사건 (최대 300)
-      this.flags = {};
+      this.flags = Object.assign({}, opts.flags);
       this.map = W4.genMap(this.seed);
       this.state = W4.baseState(this.map);
       this.nations = {};
@@ -52,9 +52,11 @@
     }
     // 한 달 진행: 일 단위 군사 단계 → 월 단위 전략 단계
     advance(months = 1) {
+      this.paused = null;
       for (let m = 0; m < months; m++) {
-        for (let d = 0; d < W4.DAYS; d++) { this.day = d; for (const s of systems) if (s.day) s.day(this, d); if (this.paused) return; }
-        this.day = 0;
+        // 일 단위 진행은 중간에 멈출 수 있다 (플레이어 전투 등). 다시 부르면 다음 단계부터 이어간다.
+        for (let d = this.dayPos || 0; d < W4.DAYS; d++) { this.day = d; for (const s of systems) if (s.day) s.day(this, d); if (this.paused) { this.dayPos = d + 1; return; } }
+        this.dayPos = 0; this.day = 0;
         for (const s of systems) if (s.month) s.month(this);
         this.turn++;
         if (this.paused) return;
@@ -62,14 +64,14 @@
     }
     // 직렬화: 지도는 시드로 다시 만들 수 있으므로 저장하지 않는다
     toJSON() {
-      const o = { v4: 1, seed: this.seed, rs: this.rs, turn: this.turn, player: this.player, scenario: this.scenario, diff: this.diff, log: this.log, flags: this.flags, state: this.state, nations: this.nations };
+      const o = { v4: 1, seed: this.seed, rs: this.rs, turn: this.turn, dayPos: this.dayPos || 0, player: this.player, scenario: this.scenario, diff: this.diff, log: this.log, flags: this.flags, state: this.state, nations: this.nations };
       for (const s of systems) if (s.save) s.save(this, o);
       return o;
     }
     static fromJSON(o) {
       if (!o || !o.v4) throw new Error('4.0 세계 데이터가 아닙니다');
       const w = Object.create(World.prototype);
-      Object.assign(w, { v4: 1, seed: o.seed, rs: o.rs, turn: o.turn, day: 0, player: o.player, scenario: o.scenario, diff: o.diff ?? 1, log: o.log || [], flags: o.flags || {}, state: o.state, nations: o.nations });
+      Object.assign(w, { v4: 1, seed: o.seed, rs: o.rs, turn: o.turn, day: 0, dayPos: o.dayPos || 0, player: o.player, scenario: o.scenario, diff: o.diff ?? 1, log: o.log || [], flags: o.flags || {}, state: o.state, nations: o.nations });
       w.map = W4.genMap(w.seed);
       if (w.state.regions.length !== w.map.regions.length) throw new Error('지도와 저장 데이터의 지역 수가 다릅니다');
       for (const s of systems) if (s.load) s.load(w, o);

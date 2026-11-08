@@ -26,7 +26,7 @@
     const w = UI.world; const before = w.log.length;
     w.advance(n);
     UI.R.dirty = true; UI.refresh(); bindTop();
-    const news = w.log.slice(before).filter(e => !w.player || e.who === w.player || e.kind === 'war' || e.kind === 'diplo' || e.kind === 'peace');
+    const news = w.log.slice(before).filter(e => !w.player || e.who === w.player || e.other === w.player || (e.kind === 'war' && e.text.includes('선전포고')) || e.kind === 'peace');
     if (news.length) toast(news.slice(-3).map(e => e.text).join(' · '));
     if (UI.afterMonth) UI.afterMonth(w);
   };

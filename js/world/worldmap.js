@@ -208,6 +208,12 @@
   W4.regionAt = (map, x, y) => { const c = (x / map.cell) | 0, r = (y / map.cell) | 0; if (c < 0 || r < 0 || c >= map.gw || r >= map.gh) return -1; return map.rid[c + r * map.gw]; };
   W4.seaAt = (map, x, y) => { const c = (x / map.cell) | 0, r = (y / map.cell) | 0; if (c < 0 || r < 0 || c >= map.gw || r >= map.gh) return -1; return map.sea[c + r * map.gw]; };
 
+  // 한 지역에서 모든 지역까지의 단계 수 (BFS, 통행 가능 함수)
+  W4.hops = (map, from, can = () => true) => {
+    const n = map.regions.length, d = new Int16Array(n).fill(99), q = [from]; d[from] = 0;
+    for (let k = 0; k < q.length; k++) { const u = q[k]; for (const v of map.regions[u].nb) if (d[v] === 99 && can(v)) { d[v] = d[u] + 1; q.push(v); } }
+    return d;
+  };
   // 지역 그래프 최단 경로 (이동 비용 = 지형 이동 비용, 통행 가능 여부 함수)
   W4.path = (map, from, to, can = () => true) => {
     if (from === to) return [from];
