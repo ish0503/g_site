@@ -442,3 +442,9 @@ body.replaying #b-start, body.replaying #b-pause, body.replaying #b-reset, body.
   .w4bar h2 { font-size: 14px; }
   .seg button { padding: 5px 7px; font-size: 12px; }
 }
+.w4pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; }
+.w4pick .btn { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; text-align: left; }
+.w4pick .btn small { width: 100%; opacity: .7; }
+.w4-panel .btn.on { outline: 2px solid #ffcf4d; }
+#w4-top span { white-space: nowrap; }
+@media (max-width: 760px) { #w4-top { font-size: 11px; gap: 4px; } }

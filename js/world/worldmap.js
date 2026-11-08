@@ -202,7 +202,7 @@
   };
 
   // 지도에서 초기 동적 상태 (Phase 3 의 세계 모델이 확장)
-  W4.baseState = (map) => ({ regions: map.regions.map(r => ({ owner: r.owner, occ: null, fort: r.fort, dev: r.dev, pop: r.pop })), seas: map.seas.map(() => ({ blockade: null })) });
+  W4.baseState = (map) => ({ regions: map.regions.map(r => ({ owner: r.owner, occ: null, fort: r.fort, dev: r.dev, pop: r.pop, bld: {}, unrest: 0, core: r.core })), seas: map.seas.map(() => ({ blockade: null })) });
 
   // 지도 좌표 → 지역 id (-1: 바다)
   W4.regionAt = (map, x, y) => { const c = (x / map.cell) | 0, r = (y / map.cell) | 0; if (c < 0 || r < 0 || c >= map.gw || r >= map.gh) return -1; return map.rid[c + r * map.gw]; };
